@@ -1,0 +1,38 @@
+<html>
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" > <!-- IE mode -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"> 
+<title>Message Gate Server. АРМ Администратора</title>
+
+<link rel="stylesheet" type="text/css" href="/ext-6.0.1/build/classic/theme-neptune/resources/theme-neptune-all.css">
+<script type="text/javascript" src="/ext-6.0.1/build/ext-all-debug.js"></script>
+<script type="text/javascript" src="/ext-6.0.1/build/classic/theme-neptune/theme-neptune.js"></script>
+<script type="text/javascript" charset="utf-8" src="/ext-6.0.1/build/classic/locale/locale-ru.js"></script>
+
+<link rel="stylesheet" type="text/css" href="css/admin.css">
+
+<script type="text/javascript">
+	var msgAdminsPath="/admin373";
+	
+	Ext.Loader.setConfig({
+		paths: {
+			"global": "/global",
+			"admins": msgAdminsPath
+		}
+	});
+	
+	Ext.require('admins.Application');
+	
+	Ext.onReady(
+		function(){
+			console.log('ready');						
+		
+			var app = new Ext.create('admins.Application',{});
+		}
+	);
+	
+</script>
+<body>
+</body>
+</html>

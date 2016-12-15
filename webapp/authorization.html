@@ -1,0 +1,99 @@
+<html>
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=Edge" > <!-- IE mode -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"> 
+<title>Авторизация</title>
+
+<link rel="stylesheet" type="text/css" href="/ext-6.0.1/build/classic/theme-neptune/resources/theme-neptune-all.css">
+<script type="text/javascript" src="/ext-6.0.1/build/ext-all-debug.js"></script>
+<script type="text/javascript" src="/ext-6.0.1/build/classic/theme-neptune/theme-neptune.js"></script>
+<script type="text/javascript" charset="utf-8" src="/ext-6.0.1/build/classic/locale/locale-ru.js"></script>
+<!--<script type="text/javascript" charset="utf-8" src="/override_ext6.js"></script>-->
+<!--<script type="text/javascript" charset="utf-8" src="commissions.js"></script>-->
+
+<script type="text/javascript">
+
+	Ext.onReady( function(){
+		
+		var stateProv;
+		if (Ext.supports.LocalStorage) stateProv = new Ext.create('Ext.state.LocalStorageProvider');
+		else stateProv = new Ext.create('Ext.state.CookieProvider')	
+		Ext.state.Manager.setProvider(stateProv);	
+
+		
+		var authFunction = function(){
+
+			wp.getEl().mask("Авторизация на сервере");
+			
+			var fieldValues = loginPanel.getForm().getFieldValues();
+			
+			Ext.Ajax.request({
+				url: '/rest/session/login',
+				params: fieldValues,
+				success: function(response){				
+
+					var jResponse = Ext.decode(response.responseText);
+					if (jResponse.success){
+						Ext.state.Manager.set('mgsLogin', fieldValues.login);
+						var params = Ext.urlDecode(location.search.substring(1));
+						if (params.back){
+							window.location=params.back;
+						}
+					} else	wp.getEl().unmask();
+				},
+				failure: function(){
+					wp.getEl().unmask();
+				}
+			});
+		};
+		
+		var loginPanel = new Ext.create("Ext.form.Panel", {
+			bodyPadding: 5,
+			width: 300,
+			title: "Авторизация",
+			defaults:{
+				xtype:"textfield", 
+				labelAlign:"right", 
+				labelWidth:100,
+				listeners: {
+					specialkey: function(f,e){
+						if(e.getKey() == e.ENTER){
+							console.log('Spacial Key = Enter'); // It's working
+							// But i wanna click btnSearch button click event
+							authFunction();
+						}
+					}
+				}
+			},
+			items: [
+				{	name: "login",
+					fieldLabel: "Логин",
+					enforceMaxLength:true,
+					maxLength:32
+				}, 
+				{	name: "password",
+					fieldLabel: "Пароль",
+					inputType: 'password'
+				}
+			],
+			bbar:[			
+				'->',
+				{	xtype: "button",
+					text: "Вход",
+					handler: authFunction
+				}
+			]
+		});
+
+		var wp = new Ext.Viewport({
+		  layout:{type:"vbox", align:"center", pack:"center"},
+		  items:[loginPanel]
+		});
+	});
+</script>
+</head>
+<body>
+	<div id="loginPanel"></div>
+</body>
+</html>

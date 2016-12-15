@@ -1,0 +1,45 @@
+{
+  "port":8080,
+  "useProxy":true,
+  "adminUriMatch":"^(/admin373/).*$",
+  "authorizedUriMatch":"^(/opers/).*$",
+  "sessionTimeout": 6000,
+  "messageIdPrefix":"LGN",
+  "defaultScenarioKey":"",
+  "infobip":{
+    "sendMessageUrl":"https://api.infobip.com/omni/1/advanced",
+    "reportsUrl":"https://api.infobip.com/omni/1/reports",
+    "scenariosUrl":"https://api.infobip.com/omni/1/scenarios",
+    "login":"",
+    "password":""
+  },
+  "proxy":{
+    "realm":"Squid proxy-caching web server",
+    "url":"",
+    "login":"",
+    "password":""
+  },
+  "hibernateProperties":[
+    {"name":"hibernate.connection.username","value":""},
+    {"name":"hibernate.connection.password","value":""},
+    {"name":"hibernate.connection.driver_class","value":"oracle.jdbc.driver.OracleDriver"},
+    {"name":"hibernate.connection.url","value":"jdbc:oracle:thin:@192.168.100.166:1521/testodbE.legion.ru"},
+    {"name":"hibernate.dialect","value":"org.hibernate.dialect.Oracle10gDialect"},
+    {"name":"hibernate.default_schema","value":"DA9993"},
+    {"name":"hibernate.show_sql","value":"true"},
+    {"name":"hibernate.format_sql","value":"true"},
+    {"name":"hibernate.dbcp.initialSize","value":"8"},
+    {"name":"hibernate.dbcp.maxActive","value":"20"},
+    {"name":"hibernate.dbcp.maxIdle","value":"20"},
+    {"name":"hibernate.dbcp.minIdle","value":"0"},
+    {"name":"hibernate.jdbc.batch_size","value":"50"},
+    {"name":"hibernate.order_inserts","value":"true"},
+    {"name":"hibernate.order_updates","value":"true"}
+  ],
+  "defaultServletProperties":[
+    {"name":"gzip","value":"true"},
+    {"name":"resourceBase","value":"/home/bankir/IdeaProjects/MessageGateServer/webapp"},
+    {"name":"gzip","value":"true"},
+    {"name":"cacheControl","value":"max-age=3600,public"}
+  ]
+}
