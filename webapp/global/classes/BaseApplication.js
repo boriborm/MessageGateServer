@@ -49,14 +49,6 @@ Ext.define('global.classes.BaseApplication', {
 		me.globalViewPort.getViewModel().set('appName',me.appName);
 		me.globalViewPort.getViewModel().set('userName',me.user.userName);
 		
-		/*
-		var appNameField = Ext.getCmp('globalFieldApplicationName');
-		console.log(appNameField);
-		if (appNameField) appNameField.updateHtml(me.appName);
-		
-		var userName = Ext.getCmp('globalFieldUserName');
-		if (userName) userName.updateHtml(me.user.userName);
-			*/			
 		me.user.hasRoles = function (roleNames){			
 			var intersect = Ext.Array.intersect(roleNames, me.user.roles);
 			return (intersect.length>0);
@@ -66,7 +58,12 @@ Ext.define('global.classes.BaseApplication', {
 	},
 	checkPermissions: function(){
 		var me = this;
-		me.loadStoresAndRun();
+		var roleArray = me.accessForRoles||[];
+		if (roleArray.length>0){
+			if (me.user.hasRoles(roleArray)){
+				me.loadStoresAndRun();
+			} else Ext.Msg.alert('Ошибка доступа', 'Доступ запрещён');
+		}else me.loadStoresAndRun();
 	},	
 	loadStoresAndRun:function(){		
 		var loadMask;
@@ -138,6 +135,7 @@ Ext.define('global.classes.BaseApplication', {
 		}
 	},
     setDataPanel:function(panel){
+		if (this.dataPanel.currentPanel) this.dataPanel.currentPanel.destroy();		
 		this.dataPanel.removeAll(false);
 		this.dataPanel.add(panel);
 		this.dataPanel.currentPanel = panel;

@@ -15,8 +15,6 @@ import org.hibernate.ScrollableResults;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
 
-import java.util.Date;
-
 public class QueueProcessor  extends AbstractProcessor {
 
     private static QueueProcessor qp;
@@ -33,7 +31,6 @@ public class QueueProcessor  extends AbstractProcessor {
 
         boolean signalDeliveryProcessor = false;
 
-        System.out.println("process queue " + (new Date()).toString());
         InfobipMessageGateway ims = null;
 
         StatelessSession sessionForQueries = Config.getHibernateSessionFactory().openStatelessSession();

@@ -9,9 +9,6 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -26,8 +23,6 @@ abstract class BaseServlet {
     User user = null;
 
     static final String[] adminRoles = {User.ROLE_ADMIN};
-
-    static final JsonObject successJsonObject = new JsonObject(true);
 
     void authorizeOrThrow(String[] roles){
         this.user = (User) securityContext.getUserPrincipal();
@@ -45,13 +40,13 @@ abstract class BaseServlet {
         }
 
     }
-
+/*
     static Date dateFromString(String dateInString) throws ParseException {
         //SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
         return formatter.parse(dateInString);
     }
-
+*/
     static void throwException(String errorMessage) {
         throw new WebApplicationException(
                 JsonObject.getErrorResponse(Response.Status.OK, errorMessage)

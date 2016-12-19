@@ -57,9 +57,14 @@ public class MgsApp
 
         if (Config.INFOBIP_AUTHORIZATION!=null) {
             /* Стартуем поток для рассылки сообщений из очереди */
-            QueueProcessor.getInstance().startProcessor();
+            //QueueProcessor.getInstance().startProcessor();
             /* Стартуем поток для получения отчетов о доставке */
-            DeliveryReportProcessor.getInstance().startProcessor();
+            //DeliveryReportProcessor.getInstance().startProcessor();
+        }
+
+        /* если активировано, то включаем обработку файлов */
+        if (settings.isUseFileProcessor()){
+            FileProcessor.getInstance().startProcessor();
         }
 
 /*

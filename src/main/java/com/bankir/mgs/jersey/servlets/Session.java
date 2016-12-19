@@ -43,7 +43,7 @@ public class Session extends BaseServlet{
             );
         }
 
-        return successJsonObject;
+        return JsonObject.Success();
     }
 
     @GET
@@ -52,7 +52,7 @@ public class Session extends BaseServlet{
     public JsonObject logout(){
         HttpSession httpSession = request.getSession();
         httpSession.invalidate();
-        return new JsonObject(true);
+        return JsonObject.Success();
     }
 
     @GET

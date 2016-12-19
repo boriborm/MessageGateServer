@@ -2,17 +2,18 @@ package com.bankir.mgs;
 
 import com.bankir.mgs.hibernate.dao.*;
 import com.bankir.mgs.hibernate.model.*;
-import com.bankir.mgs.jersey.model.CreateMessageRequestObject;
-import com.bankir.mgs.jersey.model.CreateMessageResponseObject;
-import com.bankir.mgs.jersey.model.CreateMessagesRequestObject;
-import com.bankir.mgs.jersey.model.CreateMessagesResponseObject;
+import com.bankir.mgs.jersey.model.MessageCreationRequestObject;
+import com.bankir.mgs.jersey.model.MessageCreationResponseObject;
 import org.hibernate.JDBCException;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
 
 public class MessageGenerator {
 
@@ -34,7 +35,7 @@ public class MessageGenerator {
         }
     }
 
-    public static CreateMessagesResponseObject generate(CreateMessagesRequestObject data, User user) throws VolumeException {
+    public static MessageCreationResponseObject Generate(StatelessSession session, MessageCreationRequestObject data, User user, Long bulkId) throws VolumeException {
 
         Long userId = user.getId();
         String msgPrefix = Config.getSettings().getMessageIdPrefix();
@@ -44,9 +45,10 @@ public class MessageGenerator {
         /* Проверим количество сообщений */
         if (data.getMessages().size()>MAX_MESSAGES) throw new VolumeException("Количество сообщений не должно превышать "+MAX_MESSAGES);
 
-        List<CreateMessageResponseObject> responseMessageDataList = new ArrayList<>();
+        List<MessageCreationResponseObject.SuccessMessage> successMessages = new ArrayList<>();
+        List<MessageCreationResponseObject.FailedMessage> failedMessages = new ArrayList<>();
 
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+        //StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
 
         ScenarioDAO scenarioDAO = new ScenarioDAO(session);
         MessageTypeDAO msgTypeDAO = new MessageTypeDAO(session);
@@ -81,6 +83,8 @@ public class MessageGenerator {
         int scenarioStatus;
         int messageTypeStatus;
 
+        int countIncomeMessages = data.getMessages().size();
+
 //        System.out.println(new Date().toLocaleString() + " start");
 
         /* Проверки */
@@ -88,9 +92,9 @@ public class MessageGenerator {
         //Список телефонов для выборки из PhoneGrant
         List<String> listPhones = new ArrayList<>();
 
-        for (Iterator<CreateMessageRequestObject> iterMessage = data.getMessages().listIterator(); iterMessage.hasNext(); ) {
+        for (Iterator<MessageCreationRequestObject.Message> iterMessage = data.getMessages().listIterator(); iterMessage.hasNext(); ) {
 
-            CreateMessageRequestObject message = iterMessage.next();
+            MessageCreationRequestObject.Message message = iterMessage.next();
 
             /* проверка включенных каналов на сообщении, если нет, то ставим по умолчанию SMS */
             toSms = message.toSms();
@@ -127,17 +131,14 @@ public class MessageGenerator {
 
             /* если сценарий не удалось определить, значит он не валидный */
             if (scenarioStatus == SCENARIO_INVALID) {
-                responseMessageDataList.add(
-                        new CreateMessageResponseObject(
-                                message.getMessageId(),
-                                false,
-                                "Сценарий не найден",
-                                null
+                failedMessages.add(
+                        new MessageCreationResponseObject.FailedMessage(
+                            message.getMessageId(),
+                            "Сценарий не найден"
                         )
                 );
                 iterMessage.remove();
                 continue;
-
             }
 
 
@@ -149,12 +150,10 @@ public class MessageGenerator {
 
             //если ни один канал не активировался, тогда ошибка
             if (!(toSms || toViber || toVoice || toParseco)) {
-                responseMessageDataList.add(
-                        new CreateMessageResponseObject(
+                failedMessages.add(
+                        new MessageCreationResponseObject.FailedMessage(
                                 message.getMessageId(),
-                                false,
-                                "В сценарии требуемые каналы отсутствуют",
-                                null
+                                "В сценарии требуемые каналы отсутствуют"
                         )
                 );
                 iterMessage.remove();
@@ -193,12 +192,10 @@ public class MessageGenerator {
             }
 
             if (messageTypeStatus == SCENARIO_INVALID) {
-                responseMessageDataList.add(
-                        new CreateMessageResponseObject(
+                failedMessages.add(
+                        new MessageCreationResponseObject.FailedMessage(
                                 message.getMessageId(),
-                                false,
-                                "Тип сообщения " + messageType + " не допустим",
-                                null
+                                "Тип сообщения " + messageType + " не допустим"
                         )
                 );
                 iterMessage.remove();
@@ -206,12 +203,10 @@ public class MessageGenerator {
             }
 
             if (!msgType.isActive()) {
-                responseMessageDataList.add(
-                        new CreateMessageResponseObject(
+                failedMessages.add(
+                        new MessageCreationResponseObject.FailedMessage(
                                 message.getMessageId(),
-                                false,
-                                "Тип сообщения " + messageType + " не активен",
-                                null
+                                "Тип сообщения " + messageType + " не активен"
                         )
                 );
                 iterMessage.remove();
@@ -228,12 +223,10 @@ public class MessageGenerator {
 
             //если ни один канал не активировался, тогда ошибка
             if (!(toSms || toViber || toVoice || toParseco)) {
-                responseMessageDataList.add(
-                        new CreateMessageResponseObject(
+                failedMessages.add(
+                        new MessageCreationResponseObject.FailedMessage(
                                 message.getMessageId(),
-                                false,
-                                "В типе сообщения " + messageType + " требуемые каналы заблокированы",
-                                null
+                                "В типе сообщения " + messageType + " требуемые каналы заблокированы"
                         )
                 );
                 iterMessage.remove();
@@ -253,12 +246,10 @@ public class MessageGenerator {
 
             String phone = message.getPhoneNumber();
             if ((phone == null) || (!phone.matches("^\\d{11}$"))) {
-                responseMessageDataList.add(
-                        new CreateMessageResponseObject(
+                failedMessages.add(
+                        new MessageCreationResponseObject.FailedMessage(
                                 message.getMessageId(),
-                                false,
-                                "Некорректный номер телефона",
-                                null
+                                "Некорректный номер телефона"
                         )
                 );
                 iterMessage.remove();
@@ -268,11 +259,11 @@ public class MessageGenerator {
             /* Добавляем в список телефонов для отправки */
             listPhones.add(phone);
         }
-        System.out.println(new Date().toLocaleString() + " verified. Start phonegrant caching");
 
-        if (data.getMessages().size()==0) {
-            session.close();
-            return new CreateMessagesResponseObject(responseMessageDataList, null, null);
+        /* Если все сообщения отбраковались, то прерываем дальнейшую обработку */
+        if (countIncomeMessages == failedMessages.size()) {
+            //session.close();
+            return new MessageCreationResponseObject(null, failedMessages);
         }
 
         /* Кэшируем гранты на телефоны */
@@ -286,11 +277,10 @@ public class MessageGenerator {
         }
         results.close();
 
-        System.out.println(new Date().toLocaleString() + " begin save messages");
         /* Бежим по списку сообщений, проверяем на гранты телефона и формируем список сообщений для БД,
          * сохраняя основное сообщение */
-        for (Iterator<CreateMessageRequestObject> iterMessage = data.getMessages().listIterator(); iterMessage.hasNext(); ) {
-            CreateMessageRequestObject message = iterMessage.next();
+        for (Iterator<MessageCreationRequestObject.Message> iterMessage = data.getMessages().listIterator(); iterMessage.hasNext(); ) {
+            MessageCreationRequestObject.Message message = iterMessage.next();
             if (phgCache.containsKey(message.getPhoneNumber())){
                 PhoneGrant pg = phgCache.get(message.getPhoneNumber());
 
@@ -301,12 +291,10 @@ public class MessageGenerator {
                 toParseco = pg.isAcceptParseco() && message.toParseco();
                 if (!(toSms || toViber || toVoice || toParseco)) {
                     iterMessage.remove();
-                    responseMessageDataList.add(
-                            new CreateMessageResponseObject(
+                    failedMessages.add(
+                            new MessageCreationResponseObject.FailedMessage(
                                     message.getMessageId(),
-                                    false,
-                                    "У телефона требуемые каналы заблокированы",
-                                    null
+                                    "У телефона требуемые каналы заблокированы"
                             )
                     );
                 }
@@ -316,17 +304,26 @@ public class MessageGenerator {
         /* Обрабатываем очищенные данные - сохраняем сообщения в БД */
         MessageDAO msgDAO = new MessageDAO(session);
         List<Message> dbMessages = new ArrayList<>();
-        Long bulkId = null;
         String bulkDescription = data.getDescription();
+
+        //Long messageId = null;
 
         try {
             session.getTransaction().begin();
 
-            for (Message msg : dbMessages){
-                msgDAO.save(msg);
-            }
+            /*
+            if (data.getMessages().size()<10){
+                Query query = session.createQuery("select max(m1.id) from Message m1 where not exists(select m2.id from Message m2 where m2.id between m1.id+1 and m1.id+:sz) and exists(select m3.id from Message m3 where m3.id>m1.id)")
+                        .setParameter("sz", ((Integer) data.getMessages().size()).longValue());
 
-            for (CreateMessageRequestObject message:data.getMessages() ) {
+                Object result = query.uniqueResult();
+                if (result!=null){
+                    messageId = (Long) result + 1;
+                }
+            }
+            */
+
+            for (MessageCreationRequestObject.Message message:data.getMessages() ) {
 
                 Message msg = new Message();
                 msg.setScenarioId(message.getScenarioId());
@@ -341,14 +338,13 @@ public class MessageGenerator {
                 if (message.toParseco()) msg.setParsecoText(message.getParsecoText());
 
                 msgDAO.add(msg);
+
                 msg.setExternalId(msgPrefix+msg.getId());
                 dbMessages.add(msg);
 
-                responseMessageDataList.add(
-                        new CreateMessageResponseObject(
+                successMessages.add(
+                        new MessageCreationResponseObject.SuccessMessage(
                                 message.getMessageId(),
-                                true,
-                                null,
                                 msgPrefix+msg.getId()
                         )
                 );
@@ -374,47 +370,40 @@ public class MessageGenerator {
                 );
                 reportDAO.add(report);
             }
-            System.out.println(new Date().toLocaleString() + " reports saved. Start queuing");
-
 
             QueuedMessageDAO queuedMessageDAO = new QueuedMessageDAO(session);
             BulkDAO bulkDAO = new BulkDAO(session);
             BulkMessageDAO bulkMessageDAO = new BulkMessageDAO(session);
-            QueuedBulkDAO queuedBulkDAO = new QueuedBulkDAO(session);
-            QueuedBulkMessageDAO queuedBulkMessageDAO = new QueuedBulkMessageDAO(session);
 
 
 
-            boolean signal = (dbMessages.size()>0);
-            boolean isBulk = false;
-
-
-            if (bulkDescription!=null&&bulkDescription.length()>0) {
-                isBulk=true;
-            }
-
-
-
-            if (isBulk)
-            {
-                BulkMessage bulkMessage = new BulkMessage();
+            // если не задан идентификатор рассылки и задано описание рассылки, то генерируем идентификатор
+            if (bulkId==null&&(bulkDescription!=null&&bulkDescription.length()>0)) {
                 Bulk bulk = new Bulk(bulkDescription);
                 bulkDAO.add(bulk);
                 bulkId = bulk.getId();
 
+            }
+
+            if (bulkId!=null) {
+
+                BulkMessage bulkMessage = new BulkMessage();
                 for (Message msg : dbMessages){
                     bulkMessage.setBulkId(bulkId);
                     bulkMessage.setMessageId(msg.getId());
                     bulkMessageDAO.add(bulkMessage);
                 }
 
+                /*
                 QueuedBulkMessage queuedBulkMessage = new QueuedBulkMessage();
                 for (Message msg : dbMessages){
                     queuedBulkMessage.setBulkId(bulkId);
                     queuedBulkMessage.setMessageId(msg.getId());
                     queuedBulkMessageDAO.add(queuedBulkMessage);
                 }
-                queuedBulkDAO.add(new QueuedBulk(bulkId));
+                */
+
+
             } else {
                 QueuedMessage queuedMessage = new QueuedMessage();
                 for (Message msg : dbMessages){
@@ -422,29 +411,33 @@ public class MessageGenerator {
                     queuedMessageDAO.add(queuedMessage);
                 }
             }
-//            System.out.println(new Date().toLocaleString() + " queued");
 
             session.getTransaction().commit();
-
-            //Сигнализируем процессу обработки очереди о необходимости начать обрабтку
-            if (signal) QueueProcessor.getInstance().signal();
 
         } catch (JDBCException e) {
             session.getTransaction().rollback();
             String error = e.getSQLException().getMessage();
-            for (CreateMessageRequestObject message : data.getMessages()) {
-                responseMessageDataList.add(
-                        new CreateMessageResponseObject(
+            for (MessageCreationRequestObject.Message message : data.getMessages()) {
+                failedMessages.add(
+                        new MessageCreationResponseObject.FailedMessage(
                                 message.getMessageId(),
-                                false,
-                                error,
-                                null
+                                error
                         )
                 );
+                successMessages.clear();
             }
         }
+        return new MessageCreationResponseObject(successMessages, failedMessages, bulkId, bulkDescription);
+    }
 
-        session.close();
-        return new CreateMessagesResponseObject(responseMessageDataList, bulkId, bulkDescription);
+    public static void CreateBulkQueue(StatelessSession session, Long bulkId){
+        session.getTransaction().begin();
+
+        QueuedBulkDAO queuedBulkDAO = new QueuedBulkDAO(session);
+        queuedBulkDAO.add(new QueuedBulk(bulkId));
+        Query query = session.createQuery("insert into QueuedBulkMessage(bulkId, messageId) select bm.bulkId, bm.messageId from BulkMessage bm where bm.bulkId = :bulkId");
+        query.setParameter("bulkId", bulkId);
+        query.executeUpdate();
+        session.getTransaction().commit();
     }
 }

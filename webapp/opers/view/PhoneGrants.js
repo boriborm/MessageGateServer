@@ -1,5 +1,7 @@
 Ext.define('opers.view.PhoneGrants', {
 	extend:'Ext.Container',
+	requires:['opers.controller.PhoneGrants'],
+	controller: 'PhoneGrantsController',
 	itemId:'phoneGrantsPanel',
 	cls:'phone-grants-panel',
 	layout: {type:'vbox',align:'stretch'},
@@ -9,7 +11,7 @@ Ext.define('opers.view.PhoneGrants', {
 		},
 		{	xtype:'form',
 			padding:'5 5 5 5',
-			itemId: 'dataPanel',
+			reference: 'dataPanel',
 			flex:1,
 			autoScroll:true,
 			layout:{type:'vbox', align:'center'},
@@ -17,7 +19,7 @@ Ext.define('opers.view.PhoneGrants', {
 			items:[
 				{	xtype:'combobox',
 					name:'phoneNumber',
-					itemId:'phoneNumber',
+					reference:'phoneNumber',
 					cls:'data-field',
 					store:'phoneGrantsStore',
 					queryMode: 'remote',
@@ -28,30 +30,27 @@ Ext.define('opers.view.PhoneGrants', {
 					hideTrigger:true,
 					minLength:11,
 					maxLength:11,
-					enforceMaxLength:true
+					enforceMaxLength:true,
+					listeners:{select:'select'}
 				},
 				{	xtype:'fieldcontainer',
 					layout:'hbox',
 					fieldLabel: 'Доступные каналы',
 					labelWidth:120,
 					padding:' 5 5 5 5',
-					defaults:{margin:'0 10 0 10', inputValue:1, xtype:'checkbox'},
+					defaults:{margin:'0 10 0 10', inputValue:1, xtype:'checkbox', listeners:{change:'change'}},
 					items:[
 						{	boxLabel  : 'SMS',
 							name:'acceptSms',
-							itemId:'acceptSms'
 						},
 						{	boxLabel  : 'Viber',
 							name:'acceptViber',
-							itemId:'acceptViber'
 						},
 						{	boxLabel  : 'Voice',							
 							name:'acceptVoice',
-							itemId:'acceptVoice'
 						},
 						{	boxLabel  : 'Parseco',
 							name:'acceptParseco',
-							itemId:'acceptParseco'
 						}
 					]
 				},
@@ -61,7 +60,8 @@ Ext.define('opers.view.PhoneGrants', {
 					defaults:{margin:'0 10 0 10', inputValue:1, xtype:'checkbox'},
 					items:[
 						{	xtype:'button',
-							itemId:'btnSavePhoneGrants',
+							handler:'btnSave',
+							reference:'btnSave',
 							text:' Сохранить',
 							disabled:true
 						}

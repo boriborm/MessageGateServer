@@ -16,7 +16,6 @@ Ext.define('admins.controller.Users', {
 		return '';
 	},
 	roleRenderer: function(role){
-		console.log(role);
 		var rec = admins.getApplication().controller.getUserRolesStore().findRecord('role', role);
 		return (rec?role+' ('+rec.get('description')+')':null);
 	},

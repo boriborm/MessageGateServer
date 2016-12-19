@@ -1,6 +1,8 @@
 Ext.define('opers.view.Messages', { 	
 	extend:'Ext.Container',
-	requires:['opers.store.MessageTypes'],
+	//requires:['opers.store.MessageTypes'],
+	requires:['opers.controller.Messages'],
+	controller: 'MessagesController',
 	itemId:'messagesPanel',
 	cls:'messages-panel',
 	layout:{type:'vbox', align:'stretch'},
@@ -9,21 +11,22 @@ Ext.define('opers.view.Messages', {
 			height:50
 		},
 		{	xtype:'form',
-			itemId: 'filterPanel',
+			reference: 'filterPanel',
+			cls:'filter-panel',
 			height:50,
 			layout:{type:'hbox'},
 			defaults:{margin:'10 5 0 5', labelWidth:110, labelAlign:'right', width:230},
 			items:[
 				{	xtype:'datefield',
 					name:'beginDate',
-					cls:'message-filter-field',
+					cls:'filter-field',
 					fieldLabel:'Начальная дата',
 					format:'d.m.Y',
 					submitFormat:'Y-m-d',					
 				},
 				{	xtype:'datefield',
 					name:'endDate',
-					cls:'message-filter-field',
+					cls:'filter-field',
 					fieldLabel:'Конечная дата',
 					format:'d.m.Y',
 					submitFormat:'Y-m-d',
@@ -31,7 +34,7 @@ Ext.define('opers.view.Messages', {
 				},
 				{	xtype:'textfield',
 					name:'phone',
-					cls:'message-filter-field',
+					cls:'filter-field',
 					fieldLabel:'Номер телефона',
 					enforceMaxLength:true,
 					maxLength:11,
@@ -40,7 +43,7 @@ Ext.define('opers.view.Messages', {
 				},
 				{	xtype:'combobox',
 					name:'messageType',
-					cls:'message-filter-field',
+					cls:'filter-field',
 					store:'messageTypesStore',
 					queryMode: 'local',
 					displayField: 'description',
@@ -51,7 +54,7 @@ Ext.define('opers.view.Messages', {
 				},				
 				{	xtype:'combobox',
 					name:'bulkId',
-					cls:'message-filter-field',
+					cls:'filter-field',
 					store:'bulksStore',
 					queryMode: 'remote',
 					displayField: 'description',
@@ -60,14 +63,14 @@ Ext.define('opers.view.Messages', {
 					width:350
 				},
 				{	xtype:'button',
-					cls:'message-filter-button',
-					itemId: 'btnMessagesFilter',
+					cls:'filter-button',
+					handler: 'btnFilter',
 					text:'Фильтровать',
 					width:100
 				},
 				{	xtype:'button',
-					cls:'message-filter-button',
-					itemId: 'btnMessagesFilterClear',
+					cls:'filter-button',
+					handler: 'btnFilterClear',
 					text:'Очистить',
 					width:100
 				}
@@ -80,8 +83,8 @@ Ext.define('opers.view.Messages', {
 			layout: {type:'hbox', align:'stretch'},
 			items:[
 				{	xtype: 'grid',
-					itemId: 'gridPanel',
-					cls:'messages-grid-panel',
+					reference: 'gridPanel',
+					cls:'grid-panel',
 					flex:1,
 					border:1,
 					store:'messagesStore',
@@ -89,24 +92,23 @@ Ext.define('opers.view.Messages', {
 						{ text: 'Телефон',  dataIndex: 'phoneNumber' },
 						{ text: 'Текст', dataIndex: 'smsText', flex: 1},
 						{ text: 'Внешний Id',  dataIndex: 'externalId',width:150},
-						{ text: 'Создано',  dataIndex: 'createDate',width:150, 
-							renderer:function(value){
-								return Ext.Date.format(value, 'd.m.Y H:i:s');
-							}
-						}					
+						{ text: 'Создано',  dataIndex: 'createDate',width:150, xtype:'datecolumn', format:'d.m.Y H:i:s'}					
 					],
-					bbar: { 
+					tbar: { 
 						xtype: 'pagingtoolbar',
 						displayInfo: true,
 						store:'messagesStore'
+					},
+					listeners:{
+						select:'selectGrid'
 					}
 				},
 				{	xtype:'splitter'},
 				{	xtype:'form',
 					flex:1,
-					cls:'message-data-panel',
+					cls:'data-panel',
 					minWidth:600,
-					itemId: 'dataPanel',
+					reference: 'dataPanel',
 					collapsible:true,
 					collapsed:true,
 					collapseDirection:'right',
@@ -118,14 +120,12 @@ Ext.define('opers.view.Messages', {
 					items:[
 						{	xtype:'displayfield',
 							name: 'id',
-							itemId:'id',
-							cls:'message-data-field',
+							cls:'data-field',
 							fieldLabel:'Id'
 						},
 						{	xtype:'displayfield',
 							name: 'createDate',
-							itemId:'createDate',
-							cls:'message-data-field',
+							cls:'data-field',
 							fieldLabel:'Время создания',
 							renderer:function(value){
 								return Ext.Date.format(value, 'd.m.Y H:i:s');
@@ -133,51 +133,44 @@ Ext.define('opers.view.Messages', {
 						},
 						{	xtype:'displayfield',
 							name: 'externalId',
-							itemId:'externalId',
-							cls:'message-data-field',
+							cls:'data-field',
 							fieldLabel:'Внешний Id'
 						},
 						{	xtype:'displayfield',
 							name: 'smsText',
-							itemId:'smsText',
-							cls:'message-data-field',
+							cls:'data-field',
 							fieldLabel:'SMS'
 						},
 						{	xtype:'displayfield',
 							name: 'viberText',
-							itemId:'viberText',
-							cls:'message-data-field',
+							cls:'data-field',
 							fieldLabel:'Viber'
 						},
 						{	xtype:'displayfield',
 							name: 'voiceText',
-							itemId:'voiceText',
 							cls:'message-data-field',
 							fieldLabel:'Voice'
 						},
 						{	xtype:'displayfield',
 							name: 'parsecoText',
-							itemId:'parsecoText',
-							cls:'message-data-field',
+							cls:'data-field',
 							fieldLabel:'Parseco'
 						},
 						
 						{	xtype:'displayfield',
 							name: 'user',
-							itemId:'user',
-							cls:'message-data-field',
+							cls:'data-field',
 							fieldLabel:'Создал сообщение'
 						},
 						
 						{	xtype:'displayfield',
 							name: 'scenario',
-							itemId:'scenario',
-							cls:'message-data-field',
+							cls:'data-field',
 							fieldLabel:'Сценарий'
 						},
 						{
 							xtype: 'grid',
-							itemId:'reportsGridPanel',
+							reference:'reportsGrid',
 							store:'reportsStore',
 							flex:1,
 							border:1,
@@ -193,7 +186,12 @@ Ext.define('opers.view.Messages', {
 								{ text: 'Цена',  dataIndex: 'pricePerMessage', width:100, align:'right'},
 								{ text: 'Валюта',  dataIndex: 'priceCurrency', width:100, align:'center'},
 								{ text: 'sentAt',  dataIndex: 'sentAt', xtype:'datecolumn', width:150, align:'center', format:'d.m.Y H:i:s'},
-							]
+							],
+							tbar: { 
+								xtype: 'pagingtoolbar',
+								displayInfo: true,
+								store:'reportsStore'
+							},
 						}
 					]
 				}

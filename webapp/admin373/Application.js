@@ -9,9 +9,11 @@ Ext.define('admins.Application', {
 	appName:'Message Gate Server. АРМ Администратора',
 	storesToPreload:new Array(),  
 	controllers:['Controller'],
+	accessForRoles:['admin'],
 	toolbarGrants:[
-		{button:"btnToolbarPhoneGrants", roles:["admin"]},
-		{button:"btnToolbarSendOneToAll", roles:["admin"]}
+		{button:"btnToolbarScenarios", roles:["admin"]},
+		{button:"btnToolbarMessageTypes", roles:["admin"]},
+		{button:"btnToolbarUsers", roles:["admin"]}
 	],
 	launch: function(){ 
 		var app = this;
@@ -23,6 +25,10 @@ Ext.define('admins.Application', {
 		this.callParent(arguments);
 	
 	},
+	checkPermissions: function(){
+		console.log('perms');
+		this.loadStoresAndRun();
+	},
 	start:function(){
 
 		var app=this;
@@ -31,41 +37,10 @@ Ext.define('admins.Application', {
 		app.addToolbar(toolbar);		
 		app.controller.app = this;
 		if (app.user.hasRoles(["admin"])){
-			console.log('cr');
-			app.controller.preferencesPanel = app.controller.getPreferencesView().create();
-			app.controller.preferencesPanel.filterPanel = app.controller.preferencesPanel.query('#filterPanel')[0];
-			app.controller.preferencesPanel.gridPanel = app.controller.preferencesPanel.query('#gridPanel')[0];
 			
-			app.controller.messageTypesPanel = app.controller.getMessageTypesView().create();
-			//app.controller.messageTypesPanel.filterPanel = app.controller.messageTypesPanel.query('#filterPanel')[0];
-			//app.controller.messageTypesPanel.gridPanel = app.controller.messageTypesPanel.query('#gridPanel')[0];
-			//app.controller.messageTypesPanel.dataPanel = app.controller.messageTypesPanel.query('#dataPanel')[0];
-			
-			app.controller.scenariosPanel = app.controller.getScenariosView().create();
-			
-			app.controller.usersPanel = app.controller.getUsersView().create();
-			//app.controller.scenariosPanel.filterPanel = app.controller.scenariosPanel.query('#filterPanel')[0];
-			//app.controller.scenariosPanel.gridPanel = app.controller.scenariosPanel.query('#gridPanel')[0];
-			//app.controller.scenariosPanel.dataPanel = app.controller.scenariosPanel.query('#dataPanel')[0];
-			//app.controller.scenariosPanel.dataPanel.channelsGrid = app.controller.scenariosPanel.dataPanel.query('#channelsGrid')[0];			
+			//app.controller.messageTypesPanel = app.controller.getMessageTypesView().create();
+			//app.controller.scenariosPanel = app.controller.getScenariosView().create();		
+			//app.controller.usersPanel = app.controller.getUsersView().create();
 		}
-		/*
-		if (app.user.hasRoles(["admin","reader"])){
-			app.controller.messagesPanel = app.controller.getMessagesView().create();
-			app.controller.messagesPanel.filterPanel = app.controller.messagesPanel.query('#filterPanel')[0];
-			app.controller.messagesPanel.gridPanel = app.controller.messagesPanel.query('#gridPanel')[0];
-			app.controller.messagesPanel.dataPanel = app.controller.messagesPanel.query('#dataPanel')[0];
-			app.controller.messagesPanel.dataPanel.reportsGrid = app.controller.messagesPanel.dataPanel.query('#reportsGridPanel')[0];
-		}
-		if (app.user.hasRoles(["admin","sender"])){
-			app.controller.sendOneToAllPanel = app.controller.getSendOneToAllView().create();
-			app.controller.sendOneToAllPanel.dataPanel = app.controller.sendOneToAllPanel.query('#dataPanel')[0];
-			app.controller.sendOneToAllPanel.dataPanel.gridPhones = app.controller.sendOneToAllPanel.query('#gridPhones')[0];
-		}
-		if (app.user.hasRoles(["admin","editor"])){	
-			app.controller.phoneGrantsPanel = app.controller.getPhoneGrantsView().create();
-			app.controller.phoneGrantsPanel.dataPanel = app.controller.phoneGrantsPanel.query('#dataPanel')[0];
-		}
-		*/ 
 	}
 });

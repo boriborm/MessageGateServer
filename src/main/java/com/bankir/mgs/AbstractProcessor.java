@@ -1,17 +1,21 @@
 package com.bankir.mgs;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 public class AbstractProcessor implements Runnable {
-    private volatile boolean processorEnabled = true;
+    private volatile boolean processorEnabled = false;
     private volatile long sleepTime = 10000;
     private volatile boolean processSignal=false;
     private Thread thread;
+    private String status;
 
     public synchronized void startProcessor(){
         this.processorEnabled=true;
         if (this.thread==null) {
             this.thread = new Thread(this);
             this.thread.start();
-            System.out.println("Processor "+this.getClass().getName()+" started");
+            this.status = "Processor "+this.getClass().getName()+" started";
         }
     }
 
@@ -47,7 +51,14 @@ public class AbstractProcessor implements Runnable {
                     try {
                         process();
                     } catch (Exception e) {
-                        e.printStackTrace();
+                        processorEnabled = false;
+                        StringWriter sw = new StringWriter();
+                        PrintWriter pw = new PrintWriter(sw);
+                        e.printStackTrace(pw);
+                        setStatus(sw.toString());
+                        System.out.println(getStatus());
+                        this.thread = null;
+                        return;
                     }
                 }
                 currentMilliseconds = System.currentTimeMillis();
@@ -56,8 +67,12 @@ public class AbstractProcessor implements Runnable {
         } catch (InterruptedException e) {
         }
         this.thread = null;
-        System.out.println("processor stopped");
+        this.status = "Processor "+this.getClass().getName()+ " stopped";
     }
 
     protected void process()  throws Exception {}
+
+    public String getStatus() { return this.status; }
+
+    protected void setStatus(String status) {this.status = status;}
 }

@@ -9,9 +9,6 @@ Ext.define('admins.controller.Controller', {
 		var me = this;
 		
 		me.control({
-			'#btnToolbarPreferences': {
-            	click: me.openPreferencesPanel
-	        },
 	        '#btnToolbarScenarios': {
             	click: me.openScenariosPanel
 	        },	        
@@ -25,16 +22,18 @@ Ext.define('admins.controller.Controller', {
 	},
 		
 	openScenariosPanel: function(){	
-		var me = this;		
-		me.app.setDataPanel (me.scenariosPanel);
-	},
-	openMessageTypesPanel: function(){	
 		var me = this;
-		me.app.setDataPanel (me.messageTypesPanel);
+		me.app.setDataPanel (me.getScenariosView().create());
 	},
+	
+	openMessageTypesPanel: function(){	
+		var me = this;		
+		me.app.setDataPanel (me.getMessageTypesView().create());
+	},
+	
 	openUsersPanel: function(){	
 		var me = this;
-		me.app.setDataPanel (me.usersPanel);
+		me.app.setDataPanel (me.getUsersView().create());
 	}	
 	
 });

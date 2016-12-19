@@ -22,11 +22,6 @@ import javax.ws.rs.core.MediaType;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Сервлет обрабатывает ссылки:
- * ../reports            GET     admin   получение списка типов сообщений
- */
-
 @Path("/reports")
 public class Reports extends BaseServlet{
 

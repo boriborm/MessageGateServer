@@ -1,6 +1,7 @@
 {
   "port":8080,
   "useProxy":true,
+  "useFileProcessor":false,
   "adminUriMatch":"^(/admin373/).*$",
   "authorizedUriMatch":"^(/opers/).*$",
   "sessionTimeout": 6000,
@@ -18,6 +19,13 @@
     "url":"",
     "login":"",
     "password":""
+  },
+  "filesProcessor":{
+    "charset":"Cp1251",
+    "path":"/home/bankir/messages",
+    "logPath":"/home/bankir/messages/log",
+    "failurePath":"/home/bankir/messages/failure",
+    "user":"FILEPROCESSOR"
   },
   "hibernateProperties":[
     {"name":"hibernate.connection.username","value":""},

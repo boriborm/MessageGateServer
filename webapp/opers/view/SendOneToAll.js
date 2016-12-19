@@ -1,6 +1,8 @@
 Ext.define('opers.view.SendOneToAll', {
 	extend:'Ext.Container',
 	itemId:'sendOneToAllPanel',
+	requires:['opers.controller.SendOneToAll'],
+	controller: 'SendOneToAllController',
 	cls:'send-one-to-all-panel',
 	layout: {type:'vbox',align:'stretch'},
 	items:[ 
@@ -8,7 +10,7 @@ Ext.define('opers.view.SendOneToAll', {
 			height:50
 		},
 		{	xtype:'form',
-			itemId: 'dataPanel',
+			reference: 'dataPanel',
 			flex:1,
 			padding:'5 5 5 5',
 			layout:{type:'vbox', align:'center'},
@@ -16,8 +18,7 @@ Ext.define('opers.view.SendOneToAll', {
 			items:[
 				{	xtype:'combobox',
 					name:'scenario',
-					itemId:'scenario',
-					cls:'send-data-field',
+					cls:'data-field',
 					store:'scenariosStore',
 					queryMode: 'local',
 					displayField: 'name',
@@ -28,10 +29,8 @@ Ext.define('opers.view.SendOneToAll', {
 					width:600
 				},
 				{	xtype:'textarea',
-					name:'text',
-					itemId:'text',
-					
-					cls:'send-data-field',
+					name:'text',			
+					cls:'data-field',
 					fieldLabel:'Сообщение',
 					enforceMaxLength:true,
 					maxLength:1000,
@@ -43,8 +42,8 @@ Ext.define('opers.view.SendOneToAll', {
 				
 				{	xtype:'textfield',
 					name:'description',
-					itemId:'description',					
-					cls:'send-data-field',
+					reference:'description',					
+					cls:'data-field',
 					fieldLabel:'Описание рассылки',
 					enforceMaxLength:true,
 					maxLength:100,
@@ -62,19 +61,19 @@ Ext.define('opers.view.SendOneToAll', {
 					items:[
 						{	boxLabel  : 'SMS',
 							name:'toSms',
-							itemId:'toSms'
+							reference:'toSms'
 						},
 						{	boxLabel:'Viber',
 							name:'toViber',
-							itemId:'toViber'
+							reference:'toViber'
 						},
 						{	boxLabel  : 'Voice',							
 							name:'toVoice',
-							itemId:'toVoice'
+							reference:'toVoice'
 						},
 						{	boxLabel  : 'Parseco',
 							name:'toParseco',
-							itemId:'toParseco'
+							reference:'toParseco'
 						}
 					]
 				},
@@ -91,7 +90,7 @@ Ext.define('opers.view.SendOneToAll', {
 							items:[
 								{	xtype:'textareafield',
 									name:'phones',
-									cls:'send-data-field',
+									cls:'data-field',
 									fieldLabel:'Номера телефонов',
 									labelAlign:'top',
 									grow:true,
@@ -99,13 +98,14 @@ Ext.define('opers.view.SendOneToAll', {
 									maskRe:/^([0-9]{0,11})$/
 								},
 								{	xtype:'button',
-									cls:'message-filter-button',
-									itemId: 'btnAddPhone',
+									cls:'data-button',
+									handler: 'btnAddPhone',
 									text:'Добавить',
 									width:100
 								},
 								{	xtype:'button',
-									itemId:'btnStart',
+									cls:'data-button',
+									handler:'btnStart',
 									text:'Запустить рассылку',
 									margin:'60 0 0 0'
 								}
@@ -116,8 +116,8 @@ Ext.define('opers.view.SendOneToAll', {
 							flex:1,
 							items:[
 								{	xtype: 'grid',
-									itemId: 'gridPhones',
-									cls:'send-grid-panel',							
+									reference: 'gridPhones',
+									cls:'grid-panel',
 									width:200,
 									border:1,
 									autoScroll:true,

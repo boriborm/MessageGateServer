@@ -8,13 +8,14 @@ public class Settings {
     private String defaultScenarioKey;
     private String messageIdPrefix;
     private boolean useProxy;
+    private boolean useFileProcessor;
     private String adminUriMatch;
     private String authorizedUriMatch;
     private int sessionTimeout;
 
     private Infobip infobip;
     private Proxy proxy;
-
+    private FilesProcessor filesProcessor;
     private List<Property> hibernateProperties;
     private List<Property> defaultServletProperties;
 
@@ -39,6 +40,31 @@ public class Settings {
 
         public String getValue() {
             return value;
+        }
+    }
+
+    public static class FilesProcessor{
+
+        private String path;
+        private String charset;
+        private String logPath;
+        private String failurePath;
+        private String user;
+        public String getPath() {
+            return path;
+        }
+        public String getCharset() {return charset;}
+
+        public String getLogPath() {
+            return logPath;
+        }
+
+        public String getFailurePath() {
+            return failurePath;
+        }
+
+        public String getUser() {
+            return user;
         }
     }
 
@@ -124,5 +150,13 @@ public class Settings {
 
     public Proxy getProxy() {
         return proxy;
+    }
+
+    public FilesProcessor getFilesProcessor() {
+        return filesProcessor;
+    }
+
+    public boolean isUseFileProcessor() {
+        return useFileProcessor;
     }
 }

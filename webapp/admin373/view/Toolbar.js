@@ -5,9 +5,6 @@ Ext.define('admins.view.Toolbar', {
 	itemId:'toolbar',
 	defaults:{cls:'toolbar-button'},
 	items:[ 
-		{	text:'Общие настройки',
-			itemId:'btnToolbarPreferences',
-		},
 		{	text:'Сценарии',
 			itemId:'btnToolbarScenarios'
 		},

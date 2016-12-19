@@ -117,7 +117,7 @@ public class Users extends BaseServlet{
             dao.save(usr);
 
             session.getTransaction().commit();
-            json = successJsonObject;
+            json = JsonObject.Success();
 
         }catch (JDBCException e){
             session.getTransaction().rollback();
@@ -171,7 +171,7 @@ public class Users extends BaseServlet{
             dao.save(usr);
 
             session.getTransaction().commit();
-            json = successJsonObject;
+            json = JsonObject.Success();
 
         }catch (JDBCException e){
             session.getTransaction().rollback();
@@ -219,7 +219,7 @@ public class Users extends BaseServlet{
             dao.delete(usr);
 
             session.getTransaction().commit();
-            json = successJsonObject;
+            json = JsonObject.Success();
 
         }catch (JDBCException e){
             session.getTransaction().rollback();

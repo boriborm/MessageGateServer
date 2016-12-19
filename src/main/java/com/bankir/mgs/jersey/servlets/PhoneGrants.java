@@ -50,7 +50,7 @@ public class PhoneGrants extends BaseServlet{
             }
 
             session.getTransaction().commit();
-            json = new JsonObject(true);
+            json = JsonObject.Success();
 
         }catch (JDBCException e){
             session.getTransaction().rollback();

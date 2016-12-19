@@ -108,7 +108,7 @@ public class MessageTypes extends BaseServlet{
             dao.save(mt);
 
             session.getTransaction().commit();
-            json = successJsonObject;
+            json = JsonObject.Success();
 
         }catch (JDBCException e){
             session.getTransaction().rollback();
@@ -155,7 +155,7 @@ public class MessageTypes extends BaseServlet{
             MessageType mt = new MessageType(id);
             dao.delete(mt);
             session.getTransaction().commit();
-            json = successJsonObject;
+            json = JsonObject.Success();
 
         }catch (JDBCException e){
             session.getTransaction().rollback();

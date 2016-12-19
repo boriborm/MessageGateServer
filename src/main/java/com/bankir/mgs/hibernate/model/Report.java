@@ -10,7 +10,7 @@ import java.util.Date;
 public class Report implements Serializable {
 
     @Id
-    @SequenceGenerator(name="SEQ_REPORTID", sequenceName="SEQ_REPORTID",allocationSize=1)
+    @SequenceGenerator(name="SEQ_REPORTID", sequenceName="SEQ_REPORTID",allocationSize=50)
     @GeneratedValue(strategy= GenerationType.SEQUENCE, generator="SEQ_REPORTID")
     @Column(name="id")
     private Long id;

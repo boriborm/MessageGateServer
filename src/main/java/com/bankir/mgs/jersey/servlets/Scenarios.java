@@ -5,7 +5,6 @@ import com.bankir.mgs.FilterProperty;
 import com.bankir.mgs.SorterProperty;
 import com.bankir.mgs.User;
 import com.bankir.mgs.hibernate.Utils;
-import com.bankir.mgs.hibernate.dao.ScenarioChannelDAO;
 import com.bankir.mgs.hibernate.dao.ScenarioDAO;
 import com.bankir.mgs.infobip.InfobipMessageGateway;
 import com.bankir.mgs.infobip.model.InfobipObjects;
@@ -24,14 +23,6 @@ import javax.ws.rs.core.MediaType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
-
-/**
- * Сервлет обрабатывает ссылки:
- * ../scenarios          POST    admin   создаёт новый сценарий
- * ../scenarios          PUT     admin   обновление сценария
- * ../scenarios/get   GET     admin   получение данных сценария
- * ../scenarios            GET     admin   получение списка сценариев
- */
 
 @Path("/scenarios")
 public class Scenarios extends BaseServlet {
@@ -92,7 +83,6 @@ public class Scenarios extends BaseServlet {
 
         //Сохраняем данные сценария в БД
         ScenarioDAO scDao = new ScenarioDAO(session);
-        ScenarioChannelDAO scchDao = new ScenarioChannelDAO(session);
 
         String flow = gson.toJson(scenario.getFlow());
 
@@ -157,7 +147,7 @@ public class Scenarios extends BaseServlet {
         StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
 
         ScenarioDAO scDao = new ScenarioDAO(session);
-        ScenarioChannelDAO scchDao = new ScenarioChannelDAO(session);
+
         com.bankir.mgs.hibernate.model.Scenario hibernateScenario;
 
         ScenarioObject scenario = null;
@@ -204,7 +194,6 @@ public class Scenarios extends BaseServlet {
 
         /* Если имя сценария не задали, то выводим обшибку */
         if (scenarioKey==null){
-
             throwException("Необходимо задать ключ сценария");
         }
 
@@ -244,7 +233,6 @@ public class Scenarios extends BaseServlet {
         StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
 
         ScenarioDAO scDao = new ScenarioDAO(session);
-        ScenarioChannelDAO scchDao = new ScenarioChannelDAO(session);
         com.bankir.mgs.hibernate.model.Scenario scenarioInBD;
 
         // Открываем сессию с транзакцией
@@ -375,6 +363,10 @@ public class Scenarios extends BaseServlet {
                 .setReadOnly(true);
         List result = query.list();
 
+        if (scenario.getKey().equals(Config.getSettings().getDefaultScenarioKey())){
+            throwException("Удаление сценария по умолчанию невозможно!");
+        }
+
         if (result.size()>0){
             throwException("Удаление невозможно. Сценарий \""+scenario.getName()+"\" использован в сообщениях!");
         }
@@ -396,7 +388,7 @@ public class Scenarios extends BaseServlet {
         // Закрываем сессию
         session.close();
 
-        return successJsonObject;
+        return JsonObject.Success();
 
     }
 }

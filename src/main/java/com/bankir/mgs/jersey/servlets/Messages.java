@@ -3,8 +3,9 @@ package com.bankir.mgs.jersey.servlets;
 import com.bankir.mgs.*;
 import com.bankir.mgs.hibernate.Utils;
 import com.bankir.mgs.hibernate.model.Message;
-import com.bankir.mgs.jersey.model.CreateMessagesRequestObject;
 import com.bankir.mgs.jersey.model.JsonObject;
+import com.bankir.mgs.jersey.model.MessageCreationRequestObject;
+import com.bankir.mgs.jersey.model.MessageCreationResponseObject;
 import com.bankir.mgs.jersey.model.MessageObject;
 import org.hibernate.JDBCException;
 import org.hibernate.ScrollMode;
@@ -28,15 +29,34 @@ public class Messages extends BaseServlet {
     @Path("/create")
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
-    public JsonObject create(CreateMessagesRequestObject data){
+    public Object create(MessageCreationRequestObject data){
 
         authorizeOrThrow(createMessagesRoles);
 
+        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+        Object response;
         try {
-            return new JsonObject(MessageGenerator.generate(data, user));
+
+            MessageCreationResponseObject resp = MessageGenerator.Generate(session, data, user, null);
+
+            //Сигнализируем процессу обработки очереди о необходимости начать обработку
+            if (resp.getSuccessMessages().size()>0){
+
+                if (resp.getBulkId()!=null){
+                    MessageGenerator.CreateBulkQueue(session, resp.getBulkId());
+                }
+
+                QueueProcessor.getInstance().signal();
+            }
+            response =  resp;
+
         } catch (Exception e) {
-            return new JsonObject(e.getMessage());
+
+            response = new JsonObject(e.getMessage());
         }
+
+        session.close();
+        return response;
     }
 
     @GET

@@ -24,6 +24,10 @@ public class JsonObject {
         this.data=data;
     }
 
+    public JsonObject() {
+        this.success=true;
+    }
+
     public static Response getErrorResponse(Response.Status status, String errorMessage){
         JsonObject jObj = new JsonObject(errorMessage);
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -53,5 +57,13 @@ public class JsonObject {
 
     public void setTotal(Long total) {
         this.total = total;
+    }
+
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+
+    public static JsonObject Success(){
+        return new JsonObject();
     }
 }
