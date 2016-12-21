@@ -26,13 +26,13 @@ public class Processors extends BaseServlet{
         com.bankir.mgs.DeliveryReportProcessor drp = com.bankir.mgs.DeliveryReportProcessor.getInstance();
         FileProcessor fp = FileProcessor.getInstance();
 
-        if ("startQueue".equalsIgnoreCase(process)) qp.startProcessor();
-        if ("stopQueue".equalsIgnoreCase(process)) qp.stopProcessor();
-        if ("startDelivery".equalsIgnoreCase(process)) drp.startProcessor();
-        if ("stopDelivery".equalsIgnoreCase(process)) drp.stopProcessor();
+        if ("startQueue".equalsIgnoreCase(process)) qp.startProcessor(user.getName());
+        if ("stopQueue".equalsIgnoreCase(process)) qp.stopProcessor(user.getName());
+        if ("startDelivery".equalsIgnoreCase(process)) drp.startProcessor(user.getName());
+        if ("stopDelivery".equalsIgnoreCase(process)) drp.stopProcessor(user.getName());
 
-        if ("startFile".equalsIgnoreCase(process)) fp.startProcessor();
-        if ("stopFile".equalsIgnoreCase(process)) fp.stopProcessor();
+        if ("startFile".equalsIgnoreCase(process)) fp.startProcessor(user.getName());
+        if ("stopFile".equalsIgnoreCase(process)) fp.stopProcessor(user.getName());
 
         if ("status".equalsIgnoreCase(process)){
             ProcessorsStatusObject resp = new ProcessorsStatusObject();

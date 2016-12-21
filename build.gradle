@@ -16,10 +16,14 @@ dependencies {
     compile group: 'org.eclipse.jetty', name: 'jetty-client', version: '9.3.12.v20160915'
     compile group: 'org.glassfish.jersey.core', name: 'jersey-server', version: '2.23.2'
     compile group: 'org.glassfish.jersey.containers', name: 'jersey-container-servlet', version: '2.23.2'
-    compile group: 'org.glassfish.jersey.media', name: 'jersey-media-multipart', version: '2.23.2'
+    //compile group: 'org.glassfish.jersey.media', name: 'jersey-media-multipart', version: '2.23.2'
     compile group: 'com.google.code.gson', name: 'gson', version: '2.7'
-    compile group: 'org.hibernate', name: 'hibernate-core', version: '5.2.3.Final'
+    compile group: 'org.hibernate', name: 'hibernate-core', version: '5.2.5.Final'
+    compile group: 'org.hibernate', name: 'hibernate-c3p0', version: '5.2.5.Final'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.22'
+    compile group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.8'
     //compile group: 'org.hibernate', name: 'hibernate-annotations', version: '3.5.6-Final'
     //compile group: 'org.apache.commons', name: 'commons-dbcp2', version: '2.1.1'
-    compile files("/windows/disk_d/Android/borodulin/workspace/java_libs/ojdbc6.jar")
+    //compile files("/windows/disk_d/Android/borodulin/workspace/java_libs/ojdbc6.jar")
+    compile group: 'com.oracle', name: 'ojdbc6', version: '12.1.0.1-atlassian-hosted'
 }

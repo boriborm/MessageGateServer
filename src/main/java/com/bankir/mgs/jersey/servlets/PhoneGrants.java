@@ -10,6 +10,8 @@ import com.bankir.mgs.jersey.model.JsonObject;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -18,7 +20,7 @@ import java.util.List;
 
 @Path("/phonegrants")
 public class PhoneGrants extends BaseServlet{
-
+    private static final Logger logger = LoggerFactory.getLogger(PhoneGrants.class);
     private static final String[] viewPhoneGrantsRoles = {User.ROLE_ADMIN, User.ROLE_READER, User.ROLE_EDITOR};
     private static final String[] editPhoneGrantsRoles = {User.ROLE_EDITOR};
 
@@ -53,8 +55,9 @@ public class PhoneGrants extends BaseServlet{
             json = JsonObject.Success();
 
         }catch (JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
-            json = new JsonObject("Ошибка сохранения: " + e.getSQLException());
+            json = new JsonObject("Ошибка сохранения: " + e.getSQLException().getMessage());
 
         }
 
@@ -95,6 +98,7 @@ public class PhoneGrants extends BaseServlet{
 
             return json;
         }catch(Exception e){
+            logger.error("Error: "+e.getMessage(), e);
             return new JsonObject(e.getMessage());
         }
     }

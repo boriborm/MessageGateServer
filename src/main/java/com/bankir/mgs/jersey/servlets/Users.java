@@ -12,6 +12,8 @@ import com.bankir.mgs.jersey.model.UserObject;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -20,7 +22,7 @@ import java.util.List;
 
 @Path("/users")
 public class Users extends BaseServlet{
-
+    private static final Logger logger = LoggerFactory.getLogger(Users.class);
     @POST
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -73,8 +75,9 @@ public class Users extends BaseServlet{
             json = new JsonObject(user);
 
         }catch (JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
-            json = new JsonObject("Ошибка создания типа сообщения в БД: " + e.getSQLException());
+            json = new JsonObject("Ошибка создания типа сообщения в БД: " + e.getSQLException().getMessage());
 
         }
 
@@ -120,8 +123,9 @@ public class Users extends BaseServlet{
             json = JsonObject.Success();
 
         }catch (JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
-            json = new JsonObject("Ошибка обновления данных пользователя в БД: " + e.getSQLException());
+            json = new JsonObject("Ошибка обновления данных пользователя в БД: " + e.getSQLException().getMessage());
         }
 
         // Закрываем сессию
@@ -174,8 +178,9 @@ public class Users extends BaseServlet{
             json = JsonObject.Success();
 
         }catch (JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
-            json = new JsonObject("Ошибка обновления пароля пользователя в БД: " + e.getSQLException());
+            json = new JsonObject("Ошибка обновления пароля пользователя в БД: " + e.getSQLException().getMessage());
         }
 
         // Закрываем сессию
@@ -222,8 +227,9 @@ public class Users extends BaseServlet{
             json = JsonObject.Success();
 
         }catch (JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
-            json = new JsonObject("Ошибка удаления типа сообщения в БД: " + e.getSQLException());
+            json = new JsonObject("Ошибка удаления типа сообщения в БД: " + e.getSQLException().getMessage());
         }
 
         // Закрываем сессию
@@ -247,8 +253,12 @@ public class Users extends BaseServlet{
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
+        JsonObject json;
+
+        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
         try {
-            StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
 
             List<FilterProperty> filterProperties = Utils.parseFilterProperties(filter);
             List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
@@ -283,17 +293,17 @@ public class Users extends BaseServlet{
                         )
                 );
             }
-            JsonObject json = new JsonObject(users);
-
+            json = new JsonObject(users);
             json.setTotal(countResults);
 
-            session.close();
-
-
-            return json;
-        }catch(Exception e){
-            return new JsonObject(e.getMessage());
+        }catch(JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
+            json = new JsonObject(e.getSQLException().getMessage());
         }
+
+        session.close();
+        return json;
+
     }
 
 }

@@ -16,10 +16,12 @@ public class User implements Principal {
     private String userName;
     private List<String> roles;
     private Long id;
+    private String login;
 
-    public User(Long id, String userName, List<String> roles){
+    public User(Long id, String login, String userName, List<String> roles){
         this.id = id;
         this.userName=userName;
+        this.login = login;
         if (roles == null) {
             this.roles = new ArrayList<>();
             this.roles.add(ROLE_ANONYMOUS);

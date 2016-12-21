@@ -7,6 +7,8 @@ import com.bankir.mgs.hibernate.Utils;
 import com.bankir.mgs.jersey.model.JsonObject;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -18,7 +20,7 @@ import java.util.List;
 
 @Path("/bulks")
 public class Bulks extends BaseServlet{
-
+    private static final Logger logger = LoggerFactory.getLogger(Bulks.class);
     private static final String[] viewBulksRoles = {User.ROLE_ADMIN, User.ROLE_READER, User.ROLE_EDITOR};
 
     @GET
@@ -52,6 +54,7 @@ public class Bulks extends BaseServlet{
 
             return json;
         }catch(Exception e){
+            logger.error("Error: "+e.getMessage());
             return new JsonObject(e.getMessage());
         }
     }

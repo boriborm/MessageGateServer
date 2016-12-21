@@ -10,10 +10,13 @@ import com.bankir.mgs.infobip.model.DeliveryReport;
 import com.bankir.mgs.infobip.model.Result;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class DeliveryReportProcessor extends AbstractProcessor {
 
     private static DeliveryReportProcessor rp;
+    private static final Logger logger = LoggerFactory.getLogger(DeliveryReportProcessor.class);
 
     public static final long MIN_SLEEP_TIME = 10000;
     public static final long MAX_SLEEP_TIME = 600000;
@@ -96,14 +99,13 @@ public class DeliveryReportProcessor extends AbstractProcessor {
                         sessionForTransactions.getTransaction().commit();
                     }
                 } catch (JDBCException e){
+                    logger.error("Error: "+e.getSQLException().getMessage(), e);
                     sessionForTransactions.getTransaction().rollback();
-                    e.printStackTrace();
                 }
             }
 
         }
         ims.stop();
-        /* Обрабатываем пакетные сообщения */
         sessionForTransactions.close();
         ims.stop();
     }

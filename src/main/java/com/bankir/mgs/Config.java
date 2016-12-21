@@ -24,7 +24,7 @@ public class Config {
     public static final String DEFAULT_MESSAGE_TYPE = "MESSAGE";
     private static final GsonBuilder gsonBuilder = new GsonBuilder();
 
-    public static final com.bankir.mgs.User ANONYMOUS_USER = new com.bankir.mgs.User(-1L, "ANONYMOUS", null);
+    public static final com.bankir.mgs.User ANONYMOUS_USER = new com.bankir.mgs.User(-1L, "ANONYMOUS", "ANONYMOUS", null);
 
     public static String INFOBIP_AUTHORIZATION;
 /*

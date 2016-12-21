@@ -12,6 +12,8 @@ import com.bankir.mgs.jersey.model.MessageTypeObject;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -21,7 +23,7 @@ import java.util.List;
 
 @Path("/messagetypes")
 public class MessageTypes extends BaseServlet{
-
+    private static final Logger logger = LoggerFactory.getLogger(MessageTypes.class);
     private static final String[] viewMessageTypesRoles = {User.ROLE_ADMIN, User.ROLE_READER, User.ROLE_EDITOR};
 
     @POST

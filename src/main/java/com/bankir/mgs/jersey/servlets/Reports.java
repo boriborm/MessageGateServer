@@ -13,6 +13,8 @@ import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -24,7 +26,7 @@ import java.util.List;
 
 @Path("/reports")
 public class Reports extends BaseServlet{
-
+    private static final Logger logger = LoggerFactory.getLogger(Reports.class);
     private static final String[] viewReportsRoles = {User.ROLE_ADMIN, User.ROLE_READER, User.ROLE_EDITOR};
 
     @GET
@@ -40,15 +42,18 @@ public class Reports extends BaseServlet{
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(viewReportsRoles);
-        System.out.println("messageid "+messageId);
+        JsonObject json;
+
         if (messageId== null) {
-            JsonObject json = new JsonObject(true);
+            json = new JsonObject(true);
             json.setTotal(0L);
             return json;
         }
 
+        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
         try {
-            StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
 
             List<FilterProperty> filterProperties = Utils.parseFilterProperties(filter);
             List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
@@ -88,16 +93,16 @@ public class Reports extends BaseServlet{
             }
             results.close();
 
-            JsonObject json = new JsonObject(reports);
+            json = new JsonObject(reports);
             json.setTotal(countResults);
-
-            session.close();
-
 
             return json;
         }catch(JDBCException e){
-            return new JsonObject(e.getSQLException());
+            logger.error("Error: " + e.getSQLException().getMessage(), e);
+            json = new JsonObject(e.getSQLException().getMessage());
         }
+        session.close();
+        return json;
     }
 
 }

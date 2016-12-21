@@ -17,6 +17,8 @@ import org.eclipse.jetty.http.HttpMethod;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -26,7 +28,7 @@ import java.util.List;
 
 @Path("/scenarios")
 public class Scenarios extends BaseServlet {
-
+    private static final Logger logger = LoggerFactory.getLogger(Scenarios.class);
     private String[] viewScenariosRoles = {User.ROLE_ADMIN, User.ROLE_READER, User.ROLE_EDITOR};
     private Gson gson = Config.getGsonBuilder().create();
 
@@ -57,6 +59,7 @@ public class Scenarios extends BaseServlet {
             ims.stop();
             infobipScenario = gson.fromJson(response.getContentAsString(), InfobipObjects.Scenario.class);
         } catch (Exception e) {
+            logger.error("Error: "+e.getMessage(), e);
             if (ims!=null) ims.stop();
             throwException(e.getMessage());
         }
@@ -100,7 +103,9 @@ public class Scenarios extends BaseServlet {
             scenario.setKey(newScenarioKey);
 
         } catch (JDBCException e) {
+            logger.error("Error: " + e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
+            session.close();
             throwException("Ошибка создания сценария в БД: "+e.getSQLException().getMessage());
         }
 
@@ -131,6 +136,7 @@ public class Scenarios extends BaseServlet {
             infobipScenario = gson.fromJson(response.getContentAsString(), InfobipObjects.Scenario.class);
 
         } catch (Exception e) {
+            logger.error("Error: " + e.getMessage(), e);
             if (ims!=null) ims.stop();
             throwException(e.getMessage());
         }
@@ -219,6 +225,7 @@ public class Scenarios extends BaseServlet {
             ims.stop();
             infobipScenario = gson.fromJson(response.getContentAsString(), InfobipObjects.Scenario.class);
         } catch (Exception e) {
+            logger.error("Error: " + e.getMessage(), e);
             if (ims!=null) ims.stop();
             throwException(e.getMessage());
         }
@@ -252,7 +259,9 @@ public class Scenarios extends BaseServlet {
 
 
         } catch (JDBCException e) {
+            logger.error("Error: " + e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
+            session.close();
             throwException("Ошибка сохранения сценария в БД: " + e.getSQLException().getMessage());
         }
         session.close();
@@ -306,6 +315,7 @@ public class Scenarios extends BaseServlet {
 
             return json;
         }catch(JDBCException e){
+            logger.error("Error: " + e.getSQLException().getMessage(), e);
             return new JsonObject(e.getSQLException().getMessage());
         }
     }
@@ -381,6 +391,7 @@ public class Scenarios extends BaseServlet {
             session.getTransaction().commit();
 
         }catch (JDBCException e){
+            logger.error("Error: " + e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
             throwException("Ошибка удаления сценария в БД: " + e.getSQLException());
         }

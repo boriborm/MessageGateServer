@@ -12,6 +12,8 @@ import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
@@ -21,7 +23,7 @@ import java.util.List;
 
 @Path("/messages")
 public class Messages extends BaseServlet {
-
+    private static final Logger logger = LoggerFactory.getLogger(Messages.class);
     private final static String[] viewMessagesRoles = {User.ROLE_READER};
     private final static String[] createMessagesRoles = {User.ROLE_RESTSERVICE, User.ROLE_SENDER};
 
@@ -51,7 +53,7 @@ public class Messages extends BaseServlet {
             response =  resp;
 
         } catch (Exception e) {
-
+            logger.error("Error: "+e.getMessage(), e);
             response = new JsonObject(e.getMessage());
         }
 
@@ -185,7 +187,8 @@ public class Messages extends BaseServlet {
 
             return json;
         }catch(JDBCException e){
-            return new JsonObject(e.getSQLException());
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
+            return new JsonObject(e.getSQLException().getMessage());
         }
     }
 

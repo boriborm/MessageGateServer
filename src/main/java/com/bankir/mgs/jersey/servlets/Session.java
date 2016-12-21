@@ -5,6 +5,8 @@ import com.bankir.mgs.Config;
 import com.bankir.mgs.User;
 import com.bankir.mgs.jersey.PasswordStorage;
 import com.bankir.mgs.jersey.model.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpSession;
 import javax.ws.rs.*;
@@ -14,7 +16,7 @@ import javax.ws.rs.core.Response;
 
 @Path("/session")
 public class Session extends BaseServlet{
-
+    private static final Logger logger = LoggerFactory.getLogger(Session.class);
     @POST
     @Path("/login")
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
@@ -27,10 +29,12 @@ public class Session extends BaseServlet{
         try {
             user = Authorization.Authorize(login, password);
         } catch (PasswordStorage.InvalidHashException e) {
+            logger.error("Error: "+e.getMessage(), e);
             throw new WebApplicationException(
                     JsonObject.getErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e.getMessage())
             );
         } catch (PasswordStorage.CannotPerformOperationException e) {
+            logger.error("Error: "+e.getMessage(), e);
             throw new WebApplicationException(
                     JsonObject.getErrorResponse(Response.Status.INTERNAL_SERVER_ERROR, e.getMessage())
             );

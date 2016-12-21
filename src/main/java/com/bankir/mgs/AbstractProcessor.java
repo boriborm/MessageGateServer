@@ -1,7 +1,7 @@
 package com.bankir.mgs;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class AbstractProcessor implements Runnable {
     private volatile boolean processorEnabled = false;
@@ -10,19 +10,25 @@ public class AbstractProcessor implements Runnable {
     private Thread thread;
     private String status;
 
-    public synchronized void startProcessor(){
+    public synchronized void startProcessor(String user){
+        Logger logger = LoggerFactory.getLogger(getClass().getName());
+        logger.info("Starting processor by user {}", user);
         this.processorEnabled=true;
         if (this.thread==null) {
+
             this.thread = new Thread(this);
             this.thread.start();
-            this.status = "Processor "+this.getClass().getName()+" started";
+            this.setStatus("Processor "+this.getClass().getName()+" started");
+
         }
     }
 
     public boolean isActive(){ return this.processorEnabled;}
 
-    public synchronized void stopProcessor(){
+    public synchronized void stopProcessor(String user){
         if (this.thread.isAlive()) processorEnabled=false;
+        Logger logger = LoggerFactory.getLogger(getClass().getName());
+        logger.info("Stopping processor by user {}", user);
     }
 
     public synchronized void setSleepTime(long sleepTime){
@@ -44,19 +50,15 @@ public class AbstractProcessor implements Runnable {
 
         try {
             while(processorEnabled){
-                this.thread.sleep(100);
-                if (((currentMilliseconds-prevMilliSeconds)>sleepTime)||(processSignal == true)) {
+                Thread.sleep(100);
+                if (((currentMilliseconds-prevMilliSeconds)>sleepTime)||(processSignal )) {
                     prevMilliSeconds = currentMilliseconds;
                     processSignal = false;
                     try {
                         process();
                     } catch (Exception e) {
                         processorEnabled = false;
-                        StringWriter sw = new StringWriter();
-                        PrintWriter pw = new PrintWriter(sw);
-                        e.printStackTrace(pw);
-                        setStatus(sw.toString());
-                        System.out.println(getStatus());
+                        this.setErrorStatus("Error: "+e.getMessage(), e);
                         this.thread = null;
                         return;
                     }
@@ -67,12 +69,22 @@ public class AbstractProcessor implements Runnable {
         } catch (InterruptedException e) {
         }
         this.thread = null;
-        this.status = "Processor "+this.getClass().getName()+ " stopped";
+        this.setStatus("Processor "+this.getClass().getName()+ " stopped");
     }
 
     protected void process()  throws Exception {}
 
     public String getStatus() { return this.status; }
 
-    protected void setStatus(String status) {this.status = status;}
+    protected void setStatus(String status) {
+        this.status = status;
+        Logger logger = LoggerFactory.getLogger(getClass().getName());
+        logger.info(this.getStatus());
+    };
+
+    protected void setErrorStatus(String status, Exception e) {
+        this.status = status;
+        Logger logger = LoggerFactory.getLogger(getClass().getName());
+        logger.error(this.getStatus(), e);
+    }
 }

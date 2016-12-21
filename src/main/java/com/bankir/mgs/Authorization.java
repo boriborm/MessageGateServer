@@ -20,7 +20,7 @@ public class Authorization {
 
             /* проверка пароля */
             if (PasswordStorage.verifyPassword(pass, usr.getHashInfo())) {
-                user = new User(usr.getId(), usr.getUserName(), usr.getRoles());
+                user = new User(usr.getId(), usr.getLogin(), usr.getUserName(), usr.getRoles());
             }
 
         }

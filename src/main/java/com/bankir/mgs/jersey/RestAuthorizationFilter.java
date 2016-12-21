@@ -4,6 +4,8 @@ import com.bankir.mgs.Authorization;
 import com.bankir.mgs.BasicAuth;
 import com.bankir.mgs.Config;
 import com.bankir.mgs.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -18,6 +20,8 @@ import java.io.IOException;
 @Provider
 @PreMatching
 public class RestAuthorizationFilter implements ContainerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(RestAuthorizationFilter.class);
 
     @Context
     HttpServletRequest request;
@@ -64,7 +68,9 @@ public class RestAuthorizationFilter implements ContainerRequestFilter {
                         }
 
                     } catch (PasswordStorage.InvalidHashException e) {
+                        logger.error("Error: "+e.getMessage(),e);
                     } catch (PasswordStorage.CannotPerformOperationException e) {
+                        logger.error("Error: "+e.getMessage(),e);
                     }
 
                 }

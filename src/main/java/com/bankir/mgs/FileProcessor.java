@@ -34,7 +34,7 @@ public class FileProcessor extends AbstractProcessor {
     }
 
     @Override
-    public synchronized void startProcessor() {
+    public synchronized void startProcessor(String userLogin) {
 
         filesProcessorSettings = Config.getSettings().getFilesProcessor();
         folder = new File (filesProcessorSettings.getPath());
@@ -58,21 +58,21 @@ public class FileProcessor extends AbstractProcessor {
         UserDAO udao = new UserDAO(session);
         com.bankir.mgs.hibernate.model.User usr = udao.getByLogin(filesProcessorSettings.getUser());
 
-        user = new User(usr.getId(), usr.getUserName(), usr.getRoles());
+        user = new User(usr.getId(), usr.getLogin(), usr.getUserName(), usr.getRoles());
 
         session.close();
 
         if (folder==null||!(folder.exists()&&folder.isDirectory())){
-            this.setStatus("Некорректный путь в настройках процессора");
+            this.setErrorStatus("Некорректный путь в настройках процессора", null);
             return;
         }
 
         if (user==null){
-            this.setStatus("Несуществующий пользователь в настройках процессора");
+            this.setErrorStatus("Несуществующий пользователь в настройках процессора", null);
             return;
         }
 
-        super.startProcessor();
+        super.startProcessor(userLogin);
     }
 
     private void reloadSettings(){

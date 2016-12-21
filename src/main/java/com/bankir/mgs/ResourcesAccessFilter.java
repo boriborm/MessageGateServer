@@ -36,7 +36,7 @@ public class ResourcesAccessFilter implements Filter {
 
         String uri =  httpServletRequest.getRequestURI();
 
-        System.out.println(uri);
+        //System.out.println(uri);
 
         HttpSession httpSession = httpServletRequest.getSession();
         User user = (User) httpSession.getAttribute("user");
@@ -49,7 +49,7 @@ public class ResourcesAccessFilter implements Filter {
         if (uri.matches(settings.getAdminUriMatch()) && !user.userWithRole(User.ROLE_ADMIN)){
             HttpServletResponse httpResponse = (HttpServletResponse) response;
             httpResponse.sendRedirect("/authorization.html?back=" + URLEncoder.encode(uri, "UTF-8"));
-            System.out.println("redirect to authorization 1. uri "+uri);
+            //System.out.println("redirect to authorization 1. uri "+uri);
             return;
         }
 
@@ -58,7 +58,7 @@ public class ResourcesAccessFilter implements Filter {
         if (uri.matches(settings.getAuthorizedUriMatch()) && user.isAnonymous()){
             HttpServletResponse httpResponse = (HttpServletResponse) response;
             httpResponse.sendRedirect("/authorization.html?back=" + URLEncoder.encode(uri, "UTF-8"));
-            System.out.println("redirect to authorization 2. uri "+uri);
+            //System.out.println("redirect to authorization 2. uri "+uri);
             return;
         }
 
