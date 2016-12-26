@@ -4,7 +4,7 @@
         <file>log/other.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- daily rollover -->
-            <fileNamePattern>other.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>log/other.%d{yyyy-MM-dd}.log</fileNamePattern>
 
             <!-- keep 30 days' worth of history capped at 3GB total size -->
             <maxHistory>30</maxHistory>
@@ -21,7 +21,7 @@
         <file>log/app.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- daily rollover -->
-            <fileNamePattern>app.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <fileNamePattern>log/app.%d{yyyy-MM-dd}.log</fileNamePattern>
 
             <!-- keep 30 days' worth of history capped at 3GB total size -->
             <maxHistory>30</maxHistory>
@@ -31,6 +31,40 @@
 
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="SESSION_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/session.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>log/session.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+            <!-- keep 30 days' worth of history capped at 3GB total size -->
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %msg</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="GATEWAY_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/gateway.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>log/gateway.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+            <!-- keep 30 days' worth of history capped at 3GB total size -->
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -46,13 +80,26 @@
         <appender-ref ref="STDOUT" />
     </logger>
 
+    <logger name="com.bankir.mgs.infobip.InfobipMessageGateway" level="DEBUG" additivity="false">
+        <appender-ref ref="GATEWAY_FILE" />
+    </logger>
+
+    <logger name="com.bankir.mgs.AppSessionListener" level="DEBUG" additivity="false">
+        <appender-ref ref="SESSION_FILE" />
+        <appender-ref ref="STDOUT" />
+    </logger>
+    <logger name="com.bankir.mgs.jersey.servlets.Session" level="DEBUG" additivity="false">
+        <appender-ref ref="SESSION_FILE" />
+        <appender-ref ref="STDOUT" />
+    </logger>
+
     <!-- Вывод SQL сформированный Hibernate на консоль -->
     <logger name="org.hibernate.SQL" level="DEBUG">
         <appender-ref ref="STDOUT" />
     </logger>
 
     <!-- По умолчанию вывод в файл other.log только ошибок-->
-    <root level="ERROR">
+    <root level="DEBUG">
         <appender-ref ref="FILE" />
     </root>
 </configuration>

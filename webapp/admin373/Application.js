@@ -20,7 +20,7 @@ Ext.define('admins.Application', {
 		app.controller = this.getController('admins.controller.Controller');
 		// fill storesToPreload array;
 		//app.storesToPreload[0] = Ext.data.StoreManager.lookup('scenariosStore');
-		//app.storesToPreload[1] = Ext.data.StoreManager.lookup('messageTypesStore');		
+		app.storesToPreload[0] = Ext.data.StoreManager.lookup('messageTypesStore');
 		
 		this.callParent(arguments);
 	

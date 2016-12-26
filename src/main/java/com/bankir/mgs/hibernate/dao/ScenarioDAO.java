@@ -29,13 +29,16 @@ public class ScenarioDAO implements ScenarioImpl {
         Query query = session.createQuery("from Scenario where scenarioKey = :key and infobipLogin = :login")
                 .setParameter("key", scenarioKey)
                 .setParameter("login", infobipLogin);
-
-        return (Scenario) query.uniqueResult();
+        Scenario scenario = (Scenario) query.uniqueResult();
+        scenario.parseFlow();
+        return scenario;
     }
 
     @Override
     public Scenario getById(Long id) throws JDBCException {
-        return (Scenario) session.get(Scenario.class, id);
+        Scenario scenario = (Scenario) session.get(Scenario.class, id);
+        scenario.parseFlow();
+        return scenario;
     }
 
     @Override

@@ -19,6 +19,8 @@ import org.eclipse.jetty.http.HttpHeader;
 import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.http.HttpVersion;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URI;
@@ -28,7 +30,7 @@ import java.util.concurrent.TimeoutException;
 
 
 public class InfobipMessageGateway {
-
+    private static final Logger logger = LoggerFactory.getLogger(InfobipMessageGateway.class);
     private String url;
     private HttpClient httpClient;
     private String authorization;
@@ -37,8 +39,6 @@ public class InfobipMessageGateway {
 
     public InfobipMessageGateway() throws Exception {
         Settings settings = Config.getSettings();
-        //Logger log = Log.getLog();
-        //log.setDebugEnabled(true);
 
         authorization = Config.INFOBIP_AUTHORIZATION;
         SslContextFactory sslContextFactory = new SslContextFactory();
@@ -48,8 +48,6 @@ public class InfobipMessageGateway {
         if (settings.isUseProxy()) {
             // Proxy credentials.
             AuthenticationStore auth = httpClient.getAuthenticationStore();
-            //auth.addAuthentication(new BasicAuthentication(settings.getUrl(), Authentication.ANY_REALM, settings.getLogin(), settings.getPassword()));
-
 
             Settings.Proxy proxy = settings.getProxy();
 
@@ -72,13 +70,16 @@ public class InfobipMessageGateway {
         gson = gsonBuilder.setPrettyPrinting()
                 .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
                 .create();
+
+        logger.debug("Start Infobip gateway connection");
     }
 
     public void stop(){
         try {
             httpClient.stop();
+            logger.debug("Stop Infobip gateway connection");
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.error("Error: "+e.getMessage(), e);
         }
     }
 
@@ -93,14 +94,17 @@ public class InfobipMessageGateway {
             response = sendMessage(HttpMethod.POST, url, jsonStr);
             result = gson.fromJson(response.getContentAsString(), MessagesResponse.class);
         } catch (InterruptedException e) {
+            logger.error("sendAdvancedMessage interrupt exception");
             result = new MessagesResponse();
             RequestError requestError = new RequestError(e.getMessage(), "INTERRUPT_ERROR");
             result.setRequestError(requestError);
         } catch (ExecutionException e) {
+            logger.error("sendAdvancedMessage execution exception");
             result = new MessagesResponse();
             RequestError requestError = new RequestError(e.getMessage(), getErrorType(e.getMessage()));
             result.setRequestError(requestError);
         } catch (TimeoutException e) {
+            logger.error("sendAdvancedMessage timeout exception");
             result = new MessagesResponse();
             RequestError requestError = new RequestError(e.getMessage(), "TIMEOUT_ERROR");
             result.setRequestError(requestError);
@@ -111,7 +115,8 @@ public class InfobipMessageGateway {
     }
 
     public ContentResponse sendMessage(HttpMethod method, String url, String content) throws InterruptedException, ExecutionException, TimeoutException {
-        System.out.println("sendMessage");
+
+            logger.debug("Send message");
             Request request = httpClient.newRequest(url)
                     .method(method)
                     .agent("MessageGateServer HTTP client")
@@ -121,14 +126,13 @@ public class InfobipMessageGateway {
                     .header(HttpHeader.CONTENT_TYPE, MediaType.APPLICATION_JSON);
             if (content!=null){
 
-                System.out.println("sendMessage content: "+ content);
+                logger.debug("Message content: {}", content);
                 request = request.content(new StringContentProvider(content));
             }
 
             ContentResponse response = request.send();
-
-            System.out.println(response.getStatus()+" "+response.getMediaType());
-            System.out.println(new String (response.getContent()));
+            logger.debug("Response status: {}, Type: {}", response.getStatus(), response.getMediaType());
+            logger.debug("Response content: {}", new String (response.getContent()));
             return response;
     }
 
@@ -141,19 +145,10 @@ public class InfobipMessageGateway {
         String url = settings.getInfobip().getReportsUrl();
 
         try {
-
-
             ContentResponse response = sendMessage(HttpMethod.GET, url, null);
             result = gson.fromJson(response.getContentAsString(), DeliveryReport.class);
-        } catch (InterruptedException e) {
-            System.out.println(e.getMessage());
-            result = null;
-        } catch (ExecutionException e) {
-            e.printStackTrace();
-            System.out.println(e.getMessage());
-            result = null;
-        } catch (TimeoutException e) {
-            System.out.println(e.getMessage());
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            logger.error("Error: "+ e.getMessage(), e);
             result = null;
         }
 

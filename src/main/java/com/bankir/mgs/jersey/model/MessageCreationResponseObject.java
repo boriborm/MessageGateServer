@@ -33,6 +33,9 @@ public class MessageCreationResponseObject extends JsonObject{
         this(successMessages, failedMessagesMessages,null,null);
     }
 
+    public MessageCreationResponseObject(String errorMessage){
+        super(errorMessage);
+    }
 
     public static class SuccessMessage {
         private String messageId;

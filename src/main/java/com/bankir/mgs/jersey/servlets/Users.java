@@ -4,8 +4,12 @@ import com.bankir.mgs.Config;
 import com.bankir.mgs.FilterProperty;
 import com.bankir.mgs.SorterProperty;
 import com.bankir.mgs.hibernate.Utils;
+import com.bankir.mgs.hibernate.dao.MessageTypeDAO;
 import com.bankir.mgs.hibernate.dao.UserDAO;
+import com.bankir.mgs.hibernate.dao.UserMessageTypeDAO;
+import com.bankir.mgs.hibernate.model.MessageType;
 import com.bankir.mgs.hibernate.model.User;
+import com.bankir.mgs.hibernate.model.UserMessageType;
 import com.bankir.mgs.jersey.PasswordStorage;
 import com.bankir.mgs.jersey.model.JsonObject;
 import com.bankir.mgs.jersey.model.UserObject;
@@ -70,6 +74,15 @@ public class Users extends BaseServlet{
             //заполняем для возврата полученный идентификатор и обнуляем пароль, чтобы не светился лишний раз
             user.setId(usr.getId());
             user.setPassword(null);
+
+            //Добавляме доступ к типу сообщения по умолчанию
+            MessageTypeDAO mtdao = new MessageTypeDAO(session);
+            MessageType defaultMt = mtdao.getById(Config.DEFAULT_MESSAGE_TYPE);
+            if (defaultMt != null){
+                UserMessageTypeDAO umtdao = new UserMessageTypeDAO(session);
+                UserMessageType umt = new UserMessageType(defaultMt.getTypeId(), usr.getId());
+                umtdao.add(umt);
+            }
 
             session.getTransaction().commit();
             json = new JsonObject(user);

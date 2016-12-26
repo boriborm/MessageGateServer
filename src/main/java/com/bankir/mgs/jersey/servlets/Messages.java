@@ -42,13 +42,10 @@ public class Messages extends BaseServlet {
             MessageCreationResponseObject resp = MessageGenerator.Generate(session, data, user, null);
 
             //Сигнализируем процессу обработки очереди о необходимости начать обработку
-            if (resp.getSuccessMessages().size()>0){
-
-                if (resp.getBulkId()!=null){
-                    MessageGenerator.CreateBulkQueue(session, resp.getBulkId());
+            if (resp.isSuccess()) {
+                if (resp.getSuccessMessages().size() > 0) {
+                    QueueProcessor.getInstance().signal();
                 }
-
-                QueueProcessor.getInstance().signal();
             }
             response =  resp;
 

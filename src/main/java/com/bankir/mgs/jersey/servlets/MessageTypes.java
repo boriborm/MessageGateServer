@@ -64,6 +64,7 @@ public class MessageTypes extends BaseServlet{
             json = new JsonObject(messageType);
 
         }catch (JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
             json = new JsonObject("Ошибка создания типа сообщения в БД: " + e.getSQLException());
 
@@ -113,6 +114,7 @@ public class MessageTypes extends BaseServlet{
             json = JsonObject.Success();
 
         }catch (JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
             json = new JsonObject("Ошибка обновления типа сообщения в БД: " + e.getSQLException());
         }
@@ -160,6 +162,7 @@ public class MessageTypes extends BaseServlet{
             json = JsonObject.Success();
 
         }catch (JDBCException e){
+            logger.error("Error: "+e.getSQLException().getMessage(), e);
             session.getTransaction().rollback();
             json = new JsonObject("Ошибка удаления типа сообщения в БД: " + e.getSQLException());
         }
@@ -191,12 +194,19 @@ public class MessageTypes extends BaseServlet{
             List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
 
             String hqlFrom = " FROM MessageType mt";
-            String hqlWhere = "";
+            String hqlWhere = " where 1=1";
+
             if ("Y".equalsIgnoreCase(active)){
-                hqlWhere = " where mt.active=true";
+                hqlWhere += " and mt.active=true";
             }
             if ("N".equalsIgnoreCase(active)){
-                hqlWhere = " where mt.active=false";
+                hqlWhere += " and mt.active=false";
+            }
+
+            // Если пользователь не с административной ролью, то ограничиваем доступ к типам сообщений по пользователю
+            if (!user.userWithRole(User.ROLE_ADMIN)){
+                hqlWhere += " and exists(From UserMessageType umt where umt.userId=:userId and umt.typeId=mt.typeId";
+                filterProperties.add(new FilterProperty("userId", user.getId()));
             }
 
             String countQ = "SELECT count (mt.typeId) " + hqlFrom + hqlWhere;
@@ -237,6 +247,7 @@ public class MessageTypes extends BaseServlet{
 
             return json;
         }catch(Exception e){
+            logger.error("Error: "+e.getMessage(), e);
             return new JsonObject(e.getMessage());
         }
     }

@@ -42,4 +42,8 @@ public class User implements Principal {
     }
 
     public boolean isAnonymous (){ return id==-1L;}
+
+    public String getLogin() {
+        return login;
+    }
 }

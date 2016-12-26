@@ -31,8 +31,9 @@ Ext.define('opers.controller.Messages', {
 		};
 			
 		dataPanel.expand();
-		dataPanel.getForm().setValues(data);		
-		reportsGrid.getStore().load({params:{messageId:data.id}});		
+		dataPanel.getForm().setValues(data);
+		reportsGrid.getStore().getProxy().extraParams = {messageId:data.id};
+		reportsGrid.getStore().load();
 	},
 	
 	//Buttons	

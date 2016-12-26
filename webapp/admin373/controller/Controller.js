@@ -1,9 +1,9 @@
 Ext.define('admins.controller.Controller', {
 	extend: 'Ext.app.Controller',
 
-	views: ['MessageTypes','Scenarios','Users'],
+	views: ['MessageTypes','Scenarios','Users','Processors'],
 	stores:['MessageTypes','Scenarios','Users','UserRoles'],
-	models:['MessageType','Scenario','User'],
+	models:['MessageType','Scenario','User','UserMessageType'],
 
 	init: function(){
 		var me = this;
@@ -17,7 +17,10 @@ Ext.define('admins.controller.Controller', {
 	        },
 	        '#btnToolbarUsers': {
             	click: me.openUsersPanel
-	        }			
+	        },
+	        '#btnToolbarProcessors': {
+            	click: me.openProcessorsPanel
+	        }
 		});
 	},
 		
@@ -34,6 +37,10 @@ Ext.define('admins.controller.Controller', {
 	openUsersPanel: function(){	
 		var me = this;
 		me.app.setDataPanel (me.getUsersView().create());
-	}	
+	},
+	openProcessorsPanel: function(){	
+		var me = this;
+		me.app.setDataPanel (me.getProcessorsView().create());
+	}
 	
 });

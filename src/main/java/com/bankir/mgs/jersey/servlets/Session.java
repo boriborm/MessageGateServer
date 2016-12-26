@@ -47,6 +47,7 @@ public class Session extends BaseServlet{
             );
         }
 
+        logger.debug("Session id: {}, user \"{}\" login.", httpSession.getId(), user.getLogin());
         return JsonObject.Success();
     }
 
@@ -55,6 +56,8 @@ public class Session extends BaseServlet{
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     public JsonObject logout(){
         HttpSession httpSession = request.getSession();
+        User user = (User) httpSession.getAttribute("user");
+        logger.debug("Session id: {}, user \"{}\" logout.", httpSession.getId(), user.getLogin());
         httpSession.invalidate();
         return JsonObject.Success();
     }

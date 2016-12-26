@@ -79,23 +79,21 @@ Ext.define('opers.controller.SendOneToAll', {
 				
 		var fieldValues = dataPanel.getForm().getFieldValues();
 		var message = {};
-		var requestData = {messages:[]},
-			toSms = (fieldValues.toSms==1),
-			toViber = (fieldValues.toViber==1),
-			toVoice = (fieldValues.toVoice==1),
-			toParseco = (fieldValues.toParseco==1);
+		var requestData = {
+				toSms: (fieldValues.toSms==1),
+				toViber: (fieldValues.toViber==1),
+				toVoice: (fieldValues.toVoice==1),
+				toParseco: (fieldValues.toParseco==1),
+				scenarioKey:fieldValues.scenario, 
+				messages:[]
+			};
 		
 		if (store.getCount()>1) Ext.apply(requestData, {description:fieldValues.description});		
 		
 		store.each(function(rec) {
 			
 			message = {
-				text:fieldValues.text,
-				scenarioKey:fieldValues.scenario,
-				toSms: toSms,
-				toViber: toViber,
-				toVoice: toVoice,
-				toParseco: toParseco,
+				text:fieldValues.text,				
 				phoneNumber: rec.get('phone'),
 				messageId: rec.get('phone')				
 			}			
@@ -110,7 +108,6 @@ Ext.define('opers.controller.SendOneToAll', {
 		}
 		 */
 		
-		console.log(requestData);
 		
 		me.getView().getEl().mask({msg:"Создание рассылки"});
 		

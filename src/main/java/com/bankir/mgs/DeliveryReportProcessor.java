@@ -18,8 +18,8 @@ public class DeliveryReportProcessor extends AbstractProcessor {
     private static DeliveryReportProcessor rp;
     private static final Logger logger = LoggerFactory.getLogger(DeliveryReportProcessor.class);
 
-    public static final long MIN_SLEEP_TIME = 10000;
-    public static final long MAX_SLEEP_TIME = 600000;
+    static final long MIN_SLEEP_TIME = 10000;
+    private static final long MAX_SLEEP_TIME = 600000;
 
     public static synchronized DeliveryReportProcessor getInstance(){
         if (rp ==null) rp = new DeliveryReportProcessor();
@@ -35,7 +35,6 @@ public class DeliveryReportProcessor extends AbstractProcessor {
         //System.out.println("process deliveryReport " + (new Date()).toString());
 
         InfobipMessageGateway ims = new InfobipMessageGateway();
-
 
         StatelessSession sessionForTransactions = Config.getHibernateSessionFactory().openStatelessSession();
         MessageDAO msgDAO = new MessageDAO(sessionForTransactions);
@@ -60,9 +59,9 @@ public class DeliveryReportProcessor extends AbstractProcessor {
             *  перепривязываем текущий статус
             */
 
-            sessionForTransactions.getTransaction().begin();
-            for (Result message:deliveryReport.getResults()){
 
+            for (Result message:deliveryReport.getResults()){
+                sessionForTransactions.getTransaction().begin();
                 try {
 
 
@@ -76,6 +75,8 @@ public class DeliveryReportProcessor extends AbstractProcessor {
                     }
 
                     if (msg != null) {
+
+
 
                         Report report = new Report(
                                 msg.getId(),
@@ -105,7 +106,6 @@ public class DeliveryReportProcessor extends AbstractProcessor {
             }
 
         }
-        ims.stop();
         sessionForTransactions.close();
         ims.stop();
     }

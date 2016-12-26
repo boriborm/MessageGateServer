@@ -23,8 +23,29 @@ Ext.define('admins.controller.MessageTypes', {
 		var me = this;
 		var panel = Ext.create('admins.view.AddMessageType',{
 			listeners:{
-				afterSave:function(panel, record){						
-					var store = me.lookupReference('gridPanel').getStore().add(record);
+				addMessageType:function(panel, fieldValues){
+					
+					var newMessageType = Ext.create('admins.model.MessageType', {
+						typeId: fieldValues.typeId,
+						description: fieldValues.description,
+						acceptSms: false,
+						acceptViber: false,
+						acceptVoice: false,
+						acceptParseco: false,
+						active: false
+					});
+					/* Поскольку мы заполними Id записи в typeId, то движок будет думать, что это серверная запись и
+					 * будет запускать update, а не create. Для этого помечаем запись как фантомную, чтобы она сохранялась как новая через create */
+					newMessageType.phantom=true;
+					me.getView().getEl().mask('Создание типа сообщения...');
+					newMessageType.save({
+						success:function(){
+							var store = me.lookupReference('gridPanel').getStore().add(newMessageType);
+						},
+						callback:function(){
+							me.getView().unmask();
+						}
+					});
 				}
 			}
 		});
@@ -101,58 +122,11 @@ Ext.define('admins.controller.AddMessageType', {
 		if (panel.isValid()){
 			
 			var fieldValues = panel.getForm().getFieldValues();
-			
-			var newMessageType = Ext.create('admins.model.MessageType', {
-				typeId: fieldValues.typeId,
-				description: fieldValues.description,
-				acceptSms: false,
-				acceptViber: false,
-				acceptVoice: false,
-				acceptParseco: false,
-				active: false
-			});
-			/* Поскольку мы заполними Id записи в typeId, то движок будет думать, что это серверная запись и
-			 * будет запускать update, а не create. Для этого помечаем запись как фантомную, чтобы она сохранялась как новая через create */
-			newMessageType.phantom=true;
-			panel.getEl().mask('Создание сценария...');
-			newMessageType.save({
-				success:function(){
-					panel.fireEvent('afterSave', panel, newMessageType);	
-				},
-				callback:function(){
-					panel.getEl().unmask();
-					panel.destroy();
-				}
-			});
+			panel.fireEvent('addMessageType', panel, fieldValues);
+			panel.close();			
 		}
 	},
-	btnDelete:function(){
-		var me = this,
-			record = this.currentRecord;
-			
-		if (record){
-			Ext.MessageBox.show({
-				title:'Удаление Типа сообщения',
-				msg: 'Вы уверены, что хотите удалить тип сообщения "'+record.get('typeId')+'"?',
-				buttons: Ext.MessageBox.YESNO,
-				icon: Ext.MessageBox.QUESTION,    // иконка мб {ERROR,INFO,QUESTION,WARNING}
-				width:300,                       // есть еще minWidth
-				closable:false,                  // признак наличия икнки закрытия окна
-				buttonText: {yes: 'Да', no: 'Нет'},
-				fn: function(btn){
-					if (btn=='yes'){
-						var store = me.lookupReference('gridPanel').getStore();
-						store.remove(record);
-						store.sync({
-							failure:function(){
-								store.rejectChanges();
-							}
-						});						
-					}
-				}
-			});
-		}
-	},
+	
 	btnClose:function(){
 		this.getView().destroy();
 	}

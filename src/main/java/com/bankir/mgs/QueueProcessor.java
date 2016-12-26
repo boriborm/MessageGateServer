@@ -14,9 +14,11 @@ import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class QueueProcessor  extends AbstractProcessor {
-
+    private static final Logger logger = LoggerFactory.getLogger(MessageGenerator.class);
     private static QueueProcessor qp;
     private static PhoneGrant defaultPhoneGrant = new PhoneGrant();
     private static MessageType defaultMessageType = new MessageType();
@@ -91,13 +93,13 @@ public class QueueProcessor  extends AbstractProcessor {
 
                 /* Добавляем отправку по Parseco */
                 if (phGrant.isAcceptParseco() && msgType.isAcceptParseco()) {
-                        advMsg.addViber(msg.getParsecoText(), msgType.getParsecoValidityPeriod());
+                        advMsg.addParseo(msg.getParsecoText(), msgType.getParsecoValidityPeriod());
                         sendToPhone = true;
                 }
 
                 /* Добавляем отправку по Voice */
                 if (phGrant.isAcceptVoice() && msgType.isAcceptVoice()) {
-                        advMsg.addViber(msg.getVoiceText(), msgType.getVoiceValidityPeriod());
+                        advMsg.addVoice(msg.getVoiceText(), msgType.getVoiceValidityPeriod());
                         sendToPhone = true;
                 }
             }
@@ -168,8 +170,6 @@ public class QueueProcessor  extends AbstractProcessor {
             }
         }
         results.close();
-
-        /* Обрабатываем пакетные сообщения */
 
         sessionForQueries.close();
         sessionForTransactions.close();

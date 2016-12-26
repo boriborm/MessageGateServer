@@ -24,6 +24,10 @@ public class JsonObject {
         this.data=data;
     }
 
+    public String getError() {
+        return message;
+    }
+
     public JsonObject() {
         this.success=true;
     }
@@ -61,6 +65,10 @@ public class JsonObject {
 
     public void setSuccess(boolean success) {
         this.success = success;
+    }
+
+    public boolean isSuccess() {
+        return success;
     }
 
     public static JsonObject Success(){

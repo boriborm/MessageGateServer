@@ -160,7 +160,6 @@ Ext.define('admins.view.AddMessageType', {
 	modal:true,
 	border:1,
 	height:200,
-	itemId:'addMessageTypePanel',	
 	bodyPadding:'15 15 15 15',
 	layout:'anchor',
 	defaults:{labelWidth:100, labelAlign:'right'},

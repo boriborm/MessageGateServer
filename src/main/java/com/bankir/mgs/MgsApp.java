@@ -67,7 +67,7 @@ public class MgsApp
             /* Стартуем поток для рассылки сообщений из очереди */
                 //QueueProcessor.getInstance().startProcessor("APP");
             /* Стартуем поток для получения отчетов о доставке */
-                //DeliveryReportProcessor.getInstance().startProcessor("APP");
+                DeliveryReportProcessor.getInstance().startProcessor("APP");
             }
 
         /* если активировано, то включаем обработку файлов */

@@ -14,6 +14,9 @@ Ext.define('admins.view.Toolbar', {
 		{	text:'Пользователи',
 			itemId:'btnToolbarUsers'
 		},
+		{	text:'Процессы и настройки',
+			itemId:'btnToolbarProcessors'
+		},
 		'->',
 		{	text:'АРМ Оператора',
 			itemId:'btnToolbarOperator',

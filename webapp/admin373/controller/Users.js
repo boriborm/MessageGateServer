@@ -20,19 +20,34 @@ Ext.define('admins.controller.Users', {
 		return (rec?role+' ('+rec.get('description')+')':null);
 	},
 	
+	typeIdRenderer: function(typeId){
+		var store = Ext.data.StoreManager.lookup('messageTypesStore')
+		var rec = store.findRecord('typeId', typeId);
+		return (rec?typeId+' ('+rec.get('description')+')':typeId);
+	},
+	
 	//Events
 	
 	selectGrid: function(grid, record){
 		var me = this,
+			tabPanel = me.lookupReference('tabPanel');
 			dataPanel = me.lookupReference('dataPanel');
 		me.currentRecord = record;		
-		dataPanel.expand();
+		tabPanel.expand();
 		dataPanel.getForm().setValues(record.data);
 		var roles = [];
 		Ext.Array.each(record.data.roles, function(item){
 			roles.push([item]);
 		});
 		me.lookupReference('rolesGrid').getStore().loadRawData(roles);
+		
+		var mtStore = new Ext.create('Ext.data.Store',{
+			model:'admins.model.UserMessageType',
+			autoLoad:false,
+			autoSync:false
+		});
+		mtStore.load({params:{userId:record.get('id')}});
+		me.lookupReference('messagetypesGrid').bindStore(mtStore);
 	},
 	
 	//Buttons	
@@ -134,6 +149,66 @@ Ext.define('admins.controller.Users', {
 			}
 		});
 	},	
+	
+	btnAddMessageType: function(){
+		var me = this;
+		var panel = Ext.create('admins.view.AddUserMessageType',{
+			listeners:{
+				addMessageType: function(panel, fieldValues){
+					
+					var store = me.lookupReference('messagetypesGrid').getStore();
+					var rec = store.findRecord('typeId',fieldValues.typeId);
+					
+					if (!rec){
+					
+						var newUserMessageType = Ext.create('admins.model.UserMessageType', {
+							typeId: fieldValues.typeId,
+							userId: me.currentRecord.getId()
+						});
+						
+						/* Поскольку мы заполними Id записи в typeId, то движок будет думать, что это серверная запись и
+						 * будет запускать update, а не create. Для этого помечаем запись как фантомную, чтобы она сохранялась как новая через create */
+						newUserMessageType.phantom=true;
+						me.getView().getEl().mask('Добавление доступа к типу сообщения...');
+						newUserMessageType.save({
+							success:function(){
+								panel.fireEvent('afterSave', panel, newUserMessageType);	
+								store.add(newUserMessageType);
+							},
+							callback:function(){
+								me.getView().unmask();
+							}
+						});
+					}
+				}
+			}
+		});
+		panel.show();
+	},
+	btnDeleteMessageType:function(grid, rowIndex, colIndex) {
+		var me = this,
+			store = grid.getStore(),
+			rec = store.getAt(rowIndex);
+			
+		Ext.MessageBox.confirm('Подтверждение удаления', 'Вы уверены, что хотите отобрать у пользователя доступ к типу сообщения '+rec.data.typeId+' ?', function(btn){
+			if (btn === 'yes') {				
+				
+				store.removeAt(rowIndex);
+				me.getView().getEl().mask('Сохранение данных...');
+				store.sync({
+					failure:function(){
+						store.rejectChanges();
+						me.getView().getEl().unmask();
+					},
+					success: function(){
+						store.commitChanges();
+						me.getView().getEl().unmask();
+					}
+				});	
+			}
+		});
+	},
+	
 });
 
 
@@ -165,8 +240,7 @@ Ext.define('admins.controller.AddUser', {
 					panel.getEl().unmask();
 					panel.destroy();
 				}
-			});			
-			
+			});						
 		}
 	},
 	btnClose:function(){
@@ -185,6 +259,25 @@ Ext.define('admins.controller.AddUserRole', {
 			
 			var fieldValues = panel.getForm().getFieldValues();		
 			panel.fireEvent('addRole', panel, fieldValues.role);
+			panel.close();
+		}		
+	},
+	btnClose:function(){
+		this.getView().destroy();
+	}
+});
+
+Ext.define('admins.controller.AddUserMessageType', { 		
+	extend: 'Ext.app.ViewController',
+	alias: 'controller.AddUserMessageTypeController',
+	btnAdd: function(){
+
+		var me = this;
+		var panel = this.getView();
+		if (panel.isValid()){
+			
+			var fieldValues = panel.getForm().getFieldValues();					
+			panel.fireEvent('addMessageType', panel, fieldValues);
 			panel.close();
 		}		
 	},

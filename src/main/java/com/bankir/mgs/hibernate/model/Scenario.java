@@ -1,9 +1,14 @@
 package com.bankir.mgs.hibernate.model;
 
+import com.bankir.mgs.jersey.model.ScenarioObject;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.*;
 import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name="SCENARIOS")
@@ -30,6 +35,15 @@ public class Scenario implements Serializable {
 
     @Column(name="flow")
     private String flow;
+
+    @Transient
+    boolean sms;
+    @Transient
+    boolean viber;
+    @Transient
+    boolean parseco;
+    @Transient
+    boolean voice;
 
     public Scenario(){}
 
@@ -87,5 +101,36 @@ public class Scenario implements Serializable {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public void parseFlow(){
+        sms = false;
+        viber = false;
+        parseco = false;
+        voice = false;
+        java.lang.reflect.Type listType = new TypeToken<ArrayList<ScenarioObject.Flow>>(){}.getType();
+        List<ScenarioObject.Flow> flows = new Gson().fromJson(flow, listType);
+        for(ScenarioObject.Flow flow:flows){
+            if ("SMS".equals(flow.getChannel())) sms = true;
+            if ("VIBER".equals(flow.getChannel())) viber = true;
+            if ("PARSECO".equals(flow.getChannel())) parseco = true;
+            if ("VOICE".equals(flow.getChannel())) voice = true;
+        }
+    }
+
+    public boolean isSms() {
+        return sms;
+    }
+
+    public boolean isViber() {
+        return viber;
+    }
+
+    public boolean isParseco() {
+        return parseco;
+    }
+
+    public boolean isVoice() {
+        return voice;
     }
 }
