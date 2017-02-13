@@ -6,11 +6,13 @@ import org.eclipse.jetty.client.HttpProxy;
 import org.hibernate.JDBCException;
 import org.hibernate.SessionFactory;
 import org.hibernate.cfg.Configuration;
+import sun.net.www.protocol.file.FileURLConnection;
 
 import java.io.*;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
+import java.net.*;
+import java.util.Enumeration;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 
 public class Config {
@@ -21,7 +23,6 @@ public class Config {
     public static final String MSG_FORBIDDEN = "Access denied";
     public static final String MSG_UNAUTHORIZED = "Unauthorized";
     public static final String REST_PATH = "/rest";
-    public static final String DEFAULT_MESSAGE_TYPE = "MESSAGE";
     private static final GsonBuilder gsonBuilder = new GsonBuilder();
 
     public static final com.bankir.mgs.User ANONYMOUS_USER = new com.bankir.mgs.User(-1L, "ANONYMOUS", "ANONYMOUS", null);
@@ -66,11 +67,11 @@ public class Config {
             return sessionTimeout;
         }
 
-        public String getAdminUriMatch() {
+        public String getAdminPath() {
             return adminUriMatch;
         }
 
-        public String getAuthorizedUriMatch() {
+        public String getOpersPath() {
             return authorizedUriMatch;
         }
 
@@ -221,27 +222,52 @@ public class Config {
         }
     }
 
-    private static void addPackageWithAnnotatedClasses(Configuration cfg, String scannedPackage){
+    private static void addPackageWithAnnotatedClasses(Configuration cfg, String scannedPackage) throws IOException {
 
         String CLASS_FILE_SUFFIX = ".class";
 
-        String scannedPath = scannedPackage.replace(".", "/");
+        String scannedPath = scannedPackage.replace(".", "/")+"/";
         URL scannedUrl = Thread.currentThread().getContextClassLoader().getResource(scannedPath);
-        if (scannedUrl == null) return;
-        File scannedDir = new File(scannedUrl.getFile());
 
-        for (File file : scannedDir.listFiles()) {
-            String fileName = file.getName();
-            if (!file.isDirectory())
-                if (fileName.endsWith(CLASS_FILE_SUFFIX)) {
-                    int endIndex = fileName.length() - CLASS_FILE_SUFFIX.length();
-                    String className = scannedPackage+"."+fileName.substring(0, endIndex);
-                    try {
-                        cfg.addAnnotatedClass(Class.forName(className));
-                    } catch (ClassNotFoundException ignore) {
+        if (scannedUrl == null) return;
+
+        URLConnection connection = scannedUrl.openConnection();
+
+                if (connection instanceof JarURLConnection) {
+                    final JarFile jarFile = ((JarURLConnection) connection).getJarFile();
+                    final Enumeration<JarEntry> entries = jarFile.entries();
+                    String name;
+
+                    for (JarEntry jarEntry; entries.hasMoreElements()
+                            && ((jarEntry = entries.nextElement()) != null);) {
+                        name = jarEntry.getName();
+
+                        if (name.contains(CLASS_FILE_SUFFIX)) {
+                            name = name.substring(0, name.length() - 6).replace('/', '.');
+
+                            if (name.contains(scannedPackage)) {
+                                try {
+                                    cfg.addAnnotatedClass(Class.forName(name));
+                                } catch (ClassNotFoundException ignore) {
+                                }
+                            }
+                        }
                     }
-            }
-        }
+                } else if (connection instanceof FileURLConnection) {
+                    File scannedDir = new File(scannedUrl.getFile());
+                    for (File file : scannedDir.listFiles()) {
+                        String fileName = file.getName();
+                        if (!file.isDirectory())
+                            if (fileName.endsWith(CLASS_FILE_SUFFIX)) {
+                                int endIndex = fileName.length() - CLASS_FILE_SUFFIX.length();
+                                String className = scannedPackage+"."+fileName.substring(0, endIndex);
+                                try {
+                                    cfg.addAnnotatedClass(Class.forName(className));
+                                } catch (ClassNotFoundException ignore) {
+                                }
+                            }
+                    }
+                }
     }
 
 

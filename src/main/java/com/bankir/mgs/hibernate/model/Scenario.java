@@ -36,6 +36,9 @@ public class Scenario implements Serializable {
     @Column(name="flow")
     private String flow;
 
+    @Column(name="channels")
+    private String channels;
+
     @Transient
     boolean sms;
     @Transient
@@ -44,15 +47,18 @@ public class Scenario implements Serializable {
     boolean parseco;
     @Transient
     boolean voice;
+    @Transient
+    boolean facebook;
 
     public Scenario(){}
 
-    public Scenario(String scenarioKey, String scenarioName, String flow, boolean active, String infobipLogin) {
+    public Scenario(String scenarioKey, String scenarioName, List<ScenarioObject.Flow> flows, boolean active, String infobipLogin) {
         this.scenarioKey = scenarioKey;
         this.scenarioName = scenarioName;
         this.infobipLogin = infobipLogin;
         this.active = active;
-        this.flow = flow;
+        this.flow = new Gson().toJson(flows);
+        fillFlowsData(flows);
     }
 
     public String getScenarioKey() {
@@ -91,32 +97,41 @@ public class Scenario implements Serializable {
         return active;
     }
 
-    public String getFlow() {
-        return flow;
+    public String getChannels() {
+        return channels;
     }
 
-    public void setFlow(String flow) {
-        this.flow = flow;
+    public List<ScenarioObject.Flow> getFlow() {
+        java.lang.reflect.Type listType = new TypeToken<ArrayList<ScenarioObject.Flow>>(){}.getType();
+        return new Gson().fromJson(flow, listType);
+    }
+
+    public void setFlow(List<ScenarioObject.Flow> flows) {
+        this.flow = new Gson().toJson(flows);
+        fillFlowsData(flows);
     }
 
     public void setActive(boolean active) {
         this.active = active;
     }
 
-    public void parseFlow(){
-        sms = false;
-        viber = false;
-        parseco = false;
-        voice = false;
-        java.lang.reflect.Type listType = new TypeToken<ArrayList<ScenarioObject.Flow>>(){}.getType();
-        List<ScenarioObject.Flow> flows = new Gson().fromJson(flow, listType);
+    private void fillFlowsData(List<ScenarioObject.Flow> flows){
+        this.channels = "";
+        this.sms = this.viber = this.parseco = this.voice = false;
         for(ScenarioObject.Flow flow:flows){
-            if ("SMS".equals(flow.getChannel())) sms = true;
-            if ("VIBER".equals(flow.getChannel())) viber = true;
-            if ("PARSECO".equals(flow.getChannel())) parseco = true;
-            if ("VOICE".equals(flow.getChannel())) voice = true;
+            if ("SMS".equals(flow.getChannel())) { this.sms = true; this.channels+= "S";}
+            if ("VIBER".equals(flow.getChannel())) { this.viber = true; this.channels+= "V";}
+            if ("PARSECO".equals(flow.getChannel())) { this.parseco = true; this.channels+= "P";}
+            if ("VOICE".equals(flow.getChannel())) { this.voice = true; this.channels+= "O";}
+            if ("FACEBOOK".equals(flow.getChannel())) { this.voice = true; this.channels+= "F";}
         }
     }
+    public void parseFlow(){
+        java.lang.reflect.Type listType = new TypeToken<ArrayList<ScenarioObject.Flow>>(){}.getType();
+        List<ScenarioObject.Flow> flows = new Gson().fromJson(flow, listType);
+        fillFlowsData(flows);
+    }
+
 
     public boolean isSms() {
         return sms;
@@ -132,5 +147,9 @@ public class Scenario implements Serializable {
 
     public boolean isVoice() {
         return voice;
+    }
+
+    public boolean isFacebook() {
+        return facebook;
     }
 }

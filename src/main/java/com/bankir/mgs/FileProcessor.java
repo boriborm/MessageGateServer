@@ -23,7 +23,7 @@ public class FileProcessor extends AbstractProcessor {
     private File folder;
     private File logFile;
     private File failurePath;
-    private String defaultScenarioKey;
+    private String defaultChannels = "S";
     private String defaultMessageType;
     private User user;
     private static SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -51,8 +51,8 @@ public class FileProcessor extends AbstractProcessor {
             failurePath.mkdir();
         }
 
-        defaultScenarioKey = Config.getSettings().getDefaultScenarioKey();
-        defaultMessageType = Config.DEFAULT_MESSAGE_TYPE;
+//        defaultScenarioKey = Config.getSettings().getDefaultScenarioKey();
+        defaultMessageType = Config.getSettings().getDefaultMessageType();
 
         StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
         UserDAO udao = new UserDAO(session);
@@ -75,22 +75,13 @@ public class FileProcessor extends AbstractProcessor {
         super.startProcessor(userLogin);
     }
 
-    private void reloadSettings(){
-
-    }
-
     /* Обработка */
     @Override
     protected void process() throws Exception {
 
-        String scenarioKey;
+        String channels;
         String messageType;
         String bulkDescription;
-        boolean toSms;
-        boolean toViber;
-        boolean toParseco;
-        boolean toVoice;
-
 
         String currentDateTime = sdf.format(new Date());
         StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
@@ -112,30 +103,20 @@ public class FileProcessor extends AbstractProcessor {
                 if (strLine != null) {
                     String[] lineHeader = strLine.split(";");
 
-                    //lineHeader[0] - ключ сценария, если пусто, то берется ключ по умолчанию
-                    //lineHeader[1] - тип сообщения, если пусто, то берется тип по умолчанию
+                    //lineHeader[0] - тип сообщения, если пусто, то берется тип по умолчанию
                     //lineHeader[2] - Описание рассылки
-                    //lineHeader[3] - Каналы для отправки - "1111", где первая цифра - это SMS, вторая - Viber, третья - Parseco, четвертая - Voice
-                    if (lineHeader[0] != null && lineHeader[0].length() > 0) scenarioKey = lineHeader[0];
-                    else scenarioKey = defaultScenarioKey;
-
-                    if (lineHeader[1] != null && lineHeader[1].length() > 0) messageType = lineHeader[1];
+                    //lineHeader[1] - Каналы для отправки - "1111", где первая цифра - это SMS, вторая - Viber, третья - Parseco, четвертая - Voice
+                    if (lineHeader[0] != null && lineHeader[0].length() > 0) messageType = lineHeader[0];
                     else messageType = defaultMessageType;
+
+                    if (lineHeader[1] != null && lineHeader[1].length() > 0) channels = lineHeader[1];
+                    else channels = defaultChannels;
+
 
                     if (lineHeader[2] != null && lineHeader[2].length() > 0) bulkDescription = lineHeader[2];
                     else bulkDescription = "file " + fileEntry.getName();
 
                     bulkDescription = currentDateTime + " "+ bulkDescription;
-
-                    toSms = toViber = toParseco = toVoice = true;
-
-                    if (lineHeader[3] != null && lineHeader[3].length() > 0) {
-                        toSms = getBool(lineHeader[3], 0);
-                        toViber = getBool(lineHeader[3], 1);
-                        toParseco = getBool(lineHeader[3], 2);
-                        toVoice = getBool(lineHeader[3], 3);
-                    }
-
 
 
                     session.getTransaction().begin();
@@ -149,14 +130,10 @@ public class FileProcessor extends AbstractProcessor {
                     writeToLogWithTime(logWriter, "Обработка файла " + fileEntry.getName());
 
                     MessageCreationRequestObject mreq = new MessageCreationRequestObject(
-                            scenarioKey,
-                            messageType,
-                            toSms,
-                            toViber,
-                            toVoice,
-                            toParseco
+                            channels,
+                            messageType
                     );
-
+                    MessageGenerator mg = new MessageGenerator(user, session, bulk.getId());
 
                     while ((strLine = br.readLine()) != null) {
 
@@ -171,18 +148,14 @@ public class FileProcessor extends AbstractProcessor {
 
                             if (counter % MessageGenerator.MAX_MESSAGES == 0) {
                                 if (mreq.getMessages().size() > 0) {
-                                    MessageCreationResponseObject mresp = MessageGenerator.Generate(session, mreq, user, bulk.getId());
+                                    MessageCreationResponseObject mresp = mg.generate(mreq);
                                     if (mresp.isSuccess()) {
                                         fail += mresp.getFailedMessages().size();
                                         success += mresp.getSuccessMessages().size();
                                         writeLog(logWriter, mresp);
                                         mreq = new MessageCreationRequestObject(
-                                                scenarioKey,
-                                                messageType,
-                                                toSms,
-                                                toViber,
-                                                toVoice,
-                                                toParseco
+                                                channels,
+                                                messageType
                                         );
                                     } else{
                                         fail+=mreq.getMessages().size();
@@ -191,15 +164,14 @@ public class FileProcessor extends AbstractProcessor {
                                 }
                             }
 
-                        /* Инициализируем переменные */
-
-
+                            /* Инициализируем переменные */
                             MessageCreationRequestObject.Message message = new MessageCreationRequestObject.Message(
                                     Integer.toString(counter),
                                     lineData[0],
                                     lineData[1]
                             );
                             mreq.getMessages().add(message);
+
                         } else {
                             writeToLog(logWriter, "Ошибка формата строки: cтрока " + counter);
                             fail++;
@@ -209,7 +181,7 @@ public class FileProcessor extends AbstractProcessor {
                     }
 
                     if (mreq.getMessages().size()>0) {
-                        MessageCreationResponseObject mresp = MessageGenerator.Generate(session, mreq, user, bulk.getId());
+                        MessageCreationResponseObject mresp = mg.generate(mreq);
                         if (mresp.isSuccess()) {
                             fail += mresp.getFailedMessages().size();
                             success += mresp.getSuccessMessages().size();
@@ -234,15 +206,6 @@ public class FileProcessor extends AbstractProcessor {
         session.close();
     }
 
-    private boolean getBool(String str, int pos){
-        boolean ret = false;
-
-        if(str.length()>pos){
-            ret = "1".equals(str.substring(pos,pos));
-        }
-
-        return ret;
-    }
     private void writeLog(BufferedWriter writer, MessageCreationResponseObject mresp){
         /* Выводим сведения о количестве успешно созданных сообщениях и обо всех отбракованных сообщениях */
         writeToLog(writer,"Обработка блока завершена: ");

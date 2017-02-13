@@ -68,6 +68,23 @@
         </encoder>
     </appender>
 
+    <appender name="HTTPCLIENT_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/httpclient.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!-- daily rollover -->
+            <fileNamePattern>log/httpclient.%d{yyyy-MM-dd}.log</fileNamePattern>
+
+            <!-- keep 30 days' worth of history capped at 3GB total size -->
+            <maxHistory>30</maxHistory>
+            <totalSizeCap>500MB</totalSizeCap>
+
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{35} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
             <pattern>%-5level %logger{35} %msg%n</pattern>
@@ -79,6 +96,12 @@
         <appender-ref ref="MGS_FILE" />
         <appender-ref ref="STDOUT" />
     </logger>
+<!--
+    <logger name="org.eclipse.jetty.client" level="DEBUG" additivity="false">
+        <appender-ref ref="HTTPCLIENT_FILE" />
+        <appender-ref ref="STDOUT" />
+    </logger>
+-->
 
     <logger name="com.bankir.mgs.infobip.InfobipMessageGateway" level="DEBUG" additivity="false">
         <appender-ref ref="GATEWAY_FILE" />

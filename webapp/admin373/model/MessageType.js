@@ -25,12 +25,14 @@ Ext.define('admins.model.MessageType', {
 		{name:'acceptViber', type:'bool'},
 		{name:'acceptVoice', type:'bool'},
 		{name:'acceptParseco', type:'bool'},
-		{name:'acceptEmail', type:'bool'},
+		{name:'acceptFacebook', type:'bool'},
 		{name:'active', type:'bool'},
 		{name:'smsValidityPeriod', type:'number'},
 		{name:'viberValidityPeriod', type:'number'},
 		{name:'voiceValidityPeriod', type:'number'},
-		{name:'parsecoValidityPeriod', type:'number'}
+		{name:'parsecoValidityPeriod', type:'number'},
+		{name:'facebookValidityPeriod', type:'number'},
+		{name:'verifyImsi', type:'bool'},
 		
     ]
 });

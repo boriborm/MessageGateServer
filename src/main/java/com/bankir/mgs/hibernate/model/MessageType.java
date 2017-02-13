@@ -35,6 +35,14 @@ public class MessageType  implements Serializable {
     @Column
     private boolean acceptParseco;
 
+    @Type(type="yes_no")
+    @Column
+    private boolean acceptFacebook;
+
+    @Type(type="yes_no")
+    @Column
+    private boolean verifyImsi;
+
     @Column
     private Integer smsValidityPeriod;
 
@@ -46,6 +54,9 @@ public class MessageType  implements Serializable {
 
     @Column
     private Integer voiceValidityPeriod;
+
+    @Column
+    private Integer facebookValidityPeriod;
 
     @Type(type="yes_no")
     @Column
@@ -61,24 +72,30 @@ public class MessageType  implements Serializable {
         this.acceptParseco = false;
         this.acceptViber = false;
         this.acceptVoice = false;
+        this.acceptFacebook = false;
         this.smsValidityPeriod = null;
         this.viberValidityPeriod = 1;
         this.parsecoValidityPeriod = 1;
         this.voiceValidityPeriod = 1;
+        this.facebookValidityPeriod = 1;
+        this.verifyImsi = false;
     }
 
-    public MessageType(String typeId, String description, boolean acceptSms, boolean acceptViber, boolean acceptVoice, boolean acceptParseco, Integer smsValidityPeriod, Integer viberValidityPeriod, Integer parsecoValidityPeriod, Integer voiceValidityPeriod, boolean active) {
+    public MessageType(String typeId, String description, boolean acceptSms, boolean acceptViber, boolean acceptVoice, boolean acceptParseco, boolean acceptFacebook, Integer smsValidityPeriod, Integer viberValidityPeriod, Integer parsecoValidityPeriod, Integer voiceValidityPeriod, Integer facebookValidityPeriod, boolean active, boolean verifyImsi) {
         this.typeId = typeId;
         this.description = description;
         this.acceptSms = acceptSms;
         this.acceptViber = acceptViber;
         this.acceptVoice = acceptVoice;
         this.acceptParseco = acceptParseco;
+        this.acceptFacebook = acceptFacebook;
         this.smsValidityPeriod = smsValidityPeriod;
         this.viberValidityPeriod = viberValidityPeriod;
         this.parsecoValidityPeriod = parsecoValidityPeriod;
         this.voiceValidityPeriod = voiceValidityPeriod;
+        this.facebookValidityPeriod = facebookValidityPeriod;
         this.active = active;
+        this.verifyImsi = verifyImsi;
     }
 
     public String getTypeId() {
@@ -167,5 +184,29 @@ public class MessageType  implements Serializable {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public boolean isVerifyImsi() {
+        return verifyImsi;
+    }
+
+    public void setVerifyImsi(boolean verifyImsi) {
+        this.verifyImsi = verifyImsi;
+    }
+
+    public boolean isAcceptFacebook() {
+        return acceptFacebook;
+    }
+
+    public void setAcceptFacebook(boolean acceptFacebook) {
+        this.acceptFacebook = acceptFacebook;
+    }
+
+    public Integer getFacebookValidityPeriod() {
+        return facebookValidityPeriod;
+    }
+
+    public void setFacebookValidityPeriod(Integer facebookValidityPeriod) {
+        this.facebookValidityPeriod = facebookValidityPeriod;
     }
 }

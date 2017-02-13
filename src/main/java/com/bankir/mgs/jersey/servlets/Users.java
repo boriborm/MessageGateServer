@@ -76,13 +76,15 @@ public class Users extends BaseServlet{
             user.setPassword(null);
 
             //Добавляме доступ к типу сообщения по умолчанию
+
             MessageTypeDAO mtdao = new MessageTypeDAO(session);
-            MessageType defaultMt = mtdao.getById(Config.DEFAULT_MESSAGE_TYPE);
+            MessageType defaultMt = mtdao.getById(Config.getSettings().getDefaultMessageType());
             if (defaultMt != null){
                 UserMessageTypeDAO umtdao = new UserMessageTypeDAO(session);
                 UserMessageType umt = new UserMessageType(defaultMt.getTypeId(), usr.getId());
                 umtdao.add(umt);
             }
+
 
             session.getTransaction().commit();
             json = new JsonObject(user);

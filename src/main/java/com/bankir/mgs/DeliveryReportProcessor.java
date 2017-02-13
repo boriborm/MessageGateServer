@@ -41,18 +41,16 @@ public class DeliveryReportProcessor extends AbstractProcessor {
         ReportDAO rptDAO = new ReportDAO(sessionForTransactions);
 
         Message msg = null;
+        try {
+            DeliveryReport deliveryReport = ims.getReport();
 
-        DeliveryReport deliveryReport = ims.getReport();
-        if (deliveryReport!=null){
-
-
-            if (deliveryReport.getResults().size()>0){
+            if (deliveryReport.getResults().size() > 0) {
                 //Уменьшаем сон до минимума (10 сек)
                 this.setSleepTime(MIN_SLEEP_TIME);
             } else { //Или постепенно растягиваем сон до 10 минут
                 long sleepTime = this.getSleepTime();
-                if (sleepTime<MAX_SLEEP_TIME)
-                this.setSleepTime(sleepTime+10000);
+                if (sleepTime < MAX_SLEEP_TIME)
+                    this.setSleepTime(sleepTime + 10000);
             }
 
             /* Бежим по сообщениям и сохраняем их статусы в БД,
@@ -60,7 +58,7 @@ public class DeliveryReportProcessor extends AbstractProcessor {
             */
 
 
-            for (Result message:deliveryReport.getResults()){
+            for (Result message : deliveryReport.getResults()) {
                 sessionForTransactions.getTransaction().begin();
                 try {
 
@@ -75,7 +73,6 @@ public class DeliveryReportProcessor extends AbstractProcessor {
                     }
 
                     if (msg != null) {
-
 
 
                         Report report = new Report(
@@ -99,10 +96,25 @@ public class DeliveryReportProcessor extends AbstractProcessor {
 * */
                         sessionForTransactions.getTransaction().commit();
                     }
-                } catch (JDBCException e){
-                    logger.error("Error: "+e.getSQLException().getMessage(), e);
+                } catch (JDBCException e) {
+                    logger.error("Error: " + e.getSQLException().getMessage(), e);
                     sessionForTransactions.getTransaction().rollback();
                 }
+            }
+
+        } catch (InfobipMessageGateway.RequestErrorException requestErrorException){
+            logger.error("Get report error: "+ requestErrorException.getMessage());
+            // В случае ошибок URL_ERROR, PROXY_ERROR, AUTH_ERROR - неверные настройки сервера. Процесс получения репортов останавливается
+            // до исправления
+
+            if (   requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.URL_ERROR)
+                    ||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.PROXY_ERROR)
+                    ||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.AUTH_ERROR)
+                    ){
+
+                sessionForTransactions.close();
+                ims.stop();
+                throw requestErrorException;
             }
 
         }

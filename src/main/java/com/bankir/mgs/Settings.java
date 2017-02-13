@@ -9,10 +9,11 @@ public class Settings {
     private String messageIdPrefix;
     private boolean useProxy;
     private boolean useFileProcessor;
-    private String adminUriMatch;
-    private String authorizedUriMatch;
+    private String adminPath;
+    private String opersPath;
     private int sessionTimeout;
-
+    private String imsiChangedMessage;
+    private String defaultMessageType;
     private Infobip infobip;
     private Proxy proxy;
     private FilesProcessor filesProcessor;
@@ -23,11 +24,11 @@ public class Settings {
     public int getSessionTimeout() {
         return sessionTimeout;
     }
-    public String getAdminUriMatch() {
-        return adminUriMatch;
+    public String getAdminPath() {
+        return adminPath;
     }
-    public String getAuthorizedUriMatch() {
-        return authorizedUriMatch;
+    public String getOpersPath() {
+        return opersPath;
     }
 
     public static class Property{
@@ -70,6 +71,7 @@ public class Settings {
 
     public static class Infobip{
         private String sendMessageUrl;
+        private String imsiUrl;
         //private String infobipOmniSimpleMessageUrl;
         private String scenariosUrl;
         private String reportsUrl;
@@ -84,6 +86,11 @@ public class Settings {
             return infobipOmniSimpleMessageUrl;
         }
 */
+
+        public String getImsiUrl() {
+            return imsiUrl;
+        }
+
         public String getScenariosUrl() {
             return scenariosUrl;
         }
@@ -158,5 +165,13 @@ public class Settings {
 
     public boolean isUseFileProcessor() {
         return useFileProcessor;
+    }
+
+    public String getImsiChangedMessage() {
+        return imsiChangedMessage;
+    }
+
+    public String getDefaultMessageType() {
+        return defaultMessageType;
     }
 }

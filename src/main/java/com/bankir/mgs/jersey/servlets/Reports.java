@@ -57,9 +57,11 @@ public class Reports extends BaseServlet{
 
             List<FilterProperty> filterProperties = Utils.parseFilterProperties(filter);
             List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
+            if (sorterProperties.size()==0) sorterProperties.add(new SorterProperty("reportDate","asc"));
 
             String hqlFrom = " FROM Report r";
             String hqlWhere = " WHERE r.messageId = :messageId";
+
             filterProperties.add(new FilterProperty("messageId", messageId));
 
             String countQ = "SELECT count (r.id) " + hqlFrom + hqlWhere;

@@ -7,25 +7,103 @@ Ext.define('opers.controller.SendOneToAll', {
 			mtStore = Ext.data.StoreManager.lookup('messageTypesStore'),
 			messageType = mtStore.getById('MESSAGE');
 		
-		//dataPanel.reset();
-		//dataPanel.gridPhones.getStore().removeAll();
 		me.lookupReference('description').disable();
-
-		var toSms = me.lookupReference('toSms'),
-			toViber = me.lookupReference('toViber'),
-			toVoice = me.lookupReference('toVoice'),
-			toParseco = me.lookupReference('toParseco');
-			
-		(messageType.data.acceptSms?toSms.enable():toSms.disable());
-		(messageType.data.acceptViber?toViber.enable():toViber.disable());
-		(messageType.data.acceptVoice?toVoice.enable():toVoice.disable());
-		(messageType.data.acceptParseco?toParseco.enable():toParseco.disable());
 	},
 	// Renderers
-	
+	channelRenderer:function(channel){
+		switch (channel) {		
+			case 'S':
+				return 'SMS';
+			case 'V':
+				return 'VIBER';
+			case 'P':
+				return 'PARSECO';
+			case 'O':
+				return 'VOICE';
+			case 'F':
+				return 'FACEBOOK';
+		};
+		return channel;
+	},	
 	//Events
 	
+	
+	navigate: function(layout, direction){
+		var me = this;
+		// This routine could contain business logic required to manage the navigation steps.
+		// It would call setActiveItem as needed, manage navigation button state, handle any
+		// branching logic that might be required, handle alternate actions like cancellation
+		// or finalization, etc.  A complete wizard implementation could get pretty
+		// sophisticated depending on the complexity required, and should probably be
+		// done as a subclass of CardLayout in a real-world implementation.
+		layout[direction]();
+		me.lookupReference('btnMovePrev').setDisabled(!layout.getPrev());
+		me.lookupReference('btnMoveNext').setDisabled(!layout.getNext());
+	},
+	
 	//Buttons
+	
+	goBack: function(btn){
+		var layout = this.lookupReference('dataPanel').getLayout();
+		var itemId = layout.getActiveItem().getId();
+		console.log(itemId);
+		var store = this.lookupReference('gridPhones').getStore();
+		if (itemId == 'step-5'){			
+			if (store.getCount()<=1){
+				layout.setActiveItem('step-4');
+			};			 
+		};
+		
+		this.navigate(layout, "prev");
+	},
+	goNext: function(btn){
+		var layout = this.lookupReference('dataPanel').getLayout();
+		var itemId = layout.getActiveItem().getId();
+		
+		if (itemId == 'step-1'){
+			var store = this.lookupReference('gridChannels').getStore();			
+			if (store.getCount() == 0){
+				Ext.Msg.alert('Ошибка', 'Добавьте канал');
+				return;
+			}
+		}
+		
+		if (itemId == 'step-2'){
+			var field = this.lookupReference('message');
+			if (field.getValue()== null || field.getValue().length<4){
+				Ext.Msg.alert('Ошибка', 'Введите текст сообщения (минимум 4 символа)');
+				return;
+			}
+		}
+		
+		if (itemId == 'step-3'){
+			
+			var store = this.lookupReference('gridPhones').getStore();
+			var cntRec = store.getCount()
+			
+			if (cntRec == 0){
+				/* Выдать собщение, что не указан ни один телефон! */
+				Ext.Msg.alert('Ошибка', 'Добавьте получателей');
+				return;
+			}
+			
+			if (cntRec == 1){
+				var descriptionField = this.lookupReference('description');
+				descriptionField.setValue('');
+				layout.setActiveItem('step-4');
+			};			
+		};
+		
+		if (itemId == 'step-4'){
+			var field = this.lookupReference('description');
+			if (field.getValue()== null || field.getValue().length<4){
+				Ext.Msg.alert('Ошибка', 'Укажите описание рассылки');
+				return;
+			}
+		}
+		this.navigate(layout, "next");
+	},	
+	
 	btnAddPhone: function(){
 		var me = this;
 		var app = me.app;
@@ -70,27 +148,33 @@ Ext.define('opers.controller.SendOneToAll', {
 		
 		if (!dataPanel.isValid()) return;
 		
-		var store = me.lookupReference('gridPhones').getStore();
-	
-		if (store.getCount()==0){
-			Ext.Msg.alert('Ошибка', 'Добавьте получателей');
+		console.log(me);
+		
+		var phoneStore = me.lookupReference('gridPhones').getStore();
+		if (phoneStore.getCount()==0){		
 			return;
 		}
-				
+		var channelsStore = me.lookupReference('gridChannels').getStore();
+		if (channelsStore.getCount()==0){
+			Ext.Msg.alert('Ошибка', 'Добавьте канал');
+			return;
+		}
+
+		var channels = '';
+		channelsStore.each(function(rec) { channels += rec.get('channel'); });
+
 		var fieldValues = dataPanel.getForm().getFieldValues();
 		var message = {};
 		var requestData = {
-				toSms: (fieldValues.toSms==1),
-				toViber: (fieldValues.toViber==1),
-				toVoice: (fieldValues.toVoice==1),
-				toParseco: (fieldValues.toParseco==1),
-				scenarioKey:fieldValues.scenario, 
+				channels: channels,
 				messages:[]
 			};
 		
-		if (store.getCount()>1) Ext.apply(requestData, {description:fieldValues.description});		
+		if (phoneStore.getCount()>1) Ext.apply(requestData, {description:fieldValues.description});		
 		
-		store.each(function(rec) {
+		
+		
+		phoneStore.each(function(rec) {
 			
 			message = {
 				text:fieldValues.text,				
@@ -123,9 +207,9 @@ Ext.define('opers.controller.SendOneToAll', {
 					//Редирект на репорт или сообщение об успехе? Нужно обработать ответ и выдать сколько успешно, а сколько не успешно.
 					Ext.Msg.alert('Формирование рассылки сообщений', 'Успешно сформировано - ' + jResponse.successMessages.length+'<br/>Ошибочных - ' + jResponse.failedMessages.length);
 					Ext.Array.each(jResponse.successMessages, function(item){
-						var rec = store.findRecord('phone', item.messageId);
-						store.remove(rec);
-						store.commitChanges();
+						var rec = phoneStore.findRecord('phone', item.messageId);
+						phoneStore.remove(rec);
+						phoneStore.commitChanges();
 					});
 				} else {
 					Ext.Msg.alert('Ошибка', jResponse.message);
@@ -136,5 +220,57 @@ Ext.define('opers.controller.SendOneToAll', {
 				me.getView().getEl().unmask();
 			}
 		});	
-	}	
+	},
+	btnAddChannel: function(){
+		var me = this;
+		var panel = Ext.create('opers.view.AddChannel',{
+			listeners:{
+				addChannel: function(panel, record){
+					var store = me.lookupReference('gridChannels').getStore();
+					store.add(record);
+				}
+			}
+		});
+		panel.show();
+	},
+	btnDeleteChannel:function(grid, rowIndex, colIndex) {
+		var rec = grid.getStore().getAt(rowIndex);
+		Ext.MessageBox.confirm('Подтверждение удаления', 'Вы уверены, что хотите удалить канал '+rec.data.channel+' ?', function(btn){
+			if (btn === 'yes') {
+				grid.getStore().removeAt(rowIndex);
+			}
+		});
+	},
+	btnDeletePhone:function(grid, rowIndex, colIndex) {
+		var rec = grid.getStore().getAt(rowIndex);
+		Ext.MessageBox.confirm('Подтверждение удаления', 'Вы уверены, что хотите удалить телефон '+rec.data.phone+' ?', function(btn){
+			if (btn === 'yes') {
+				grid.getStore().removeAt(rowIndex);
+			}
+		});
+	}
+});
+
+Ext.define('opers.controller.AddChannel', { 		
+	extend: 'Ext.app.ViewController',
+	alias: 'controller.AddChannelController',
+	
+	btnAdd: function(){
+
+		var me = this;
+		var panel = this.getView();
+		if (panel.isValid()){
+			
+			var fieldValues = panel.getForm().getFieldValues();
+			var newChannel  = Ext.create('opers.model.Channel',{
+				channel:fieldValues.channel
+			});			
+			
+			panel.fireEvent('addChannel', panel, newChannel);
+			panel.close();
+		}		
+	},
+	btnClose:function(){
+		this.getView().destroy();
+	}
 });

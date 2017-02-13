@@ -126,7 +126,7 @@ Ext.define('admins.controller.Scenarios', {
 				grid.getStore().removeAt(rowIndex);
 			}
 		});
-	},	
+	}
 });
 
 

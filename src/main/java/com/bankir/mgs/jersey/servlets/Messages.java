@@ -39,7 +39,8 @@ public class Messages extends BaseServlet {
         Object response;
         try {
 
-            MessageCreationResponseObject resp = MessageGenerator.Generate(session, data, user, null);
+            MessageGenerator mg = new MessageGenerator(user, session, null);
+            MessageCreationResponseObject resp = mg.generate(data);
 
             //Сигнализируем процессу обработки очереди о необходимости начать обработку
             if (resp.isSuccess()) {

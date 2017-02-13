@@ -28,7 +28,9 @@ Ext.define('admins.view.MessageTypes', {
 						{ text: 'SMS',  dataIndex: 'acceptSms',width:80, align:'center', renderer:'checkboxRenderer'},
 						{ text: 'Viber',  dataIndex: 'acceptViber',width:80, align:'center', renderer:'checkboxRenderer'},
 						{ text: 'Voice',  dataIndex: 'acceptVoice',width:80, align:'center', renderer:'checkboxRenderer'},
-						{ text: 'Parseco',  dataIndex: 'acceptParseco',width:80, align:'center', renderer:'checkboxRenderer'}
+						{ text: 'Parseco',  dataIndex: 'acceptParseco',width:80, align:'center', renderer:'checkboxRenderer'},
+						{ text: 'Facebook',  dataIndex: 'acceptFacebook',width:80, align:'center', renderer:'checkboxRenderer'},
+						{ text: 'Проверка IMSI',  dataIndex: 'verifyImsi',width:80, align:'center', renderer:'checkboxRenderer'}
 					],
 					tbar: { 
 						xtype: 'pagingtoolbar',
@@ -83,6 +85,12 @@ Ext.define('admins.view.MessageTypes', {
 							itemId:'active',
 							margin:'5 5 5 155'
 						},
+						{	xtype:'checkboxfield',
+							inputValue:1, 
+							boxLabel  : 'Проверка IMSI',
+							name:'verifyImsi',
+							margin:'5 5 5 155'
+						},
 						{	xtype:'fieldcontainer',
 							layout:'hbox',
 							fieldLabel: 'Доступные каналы',
@@ -104,6 +112,10 @@ Ext.define('admins.view.MessageTypes', {
 								{	boxLabel  : 'Parseco',
 									name:'acceptParseco',
 									itemId:'acceptParseco'
+								},
+								{	boxLabel  : 'Facebook',
+									name:'acceptFacebook',
+									itemId:'acceptFacebook'
 								}
 							]														
 						},
@@ -114,19 +126,23 @@ Ext.define('admins.view.MessageTypes', {
 							items:[
 								{	name: 'smsValidityPeriod',
 									itemId:'smsValidityPeriod',
-									fieldLabel:'Период доставки через канал SMS, сек.'									
+									fieldLabel:'Период доставки через канал SMS, мин.'									
 								},
 								{	name: 'viberValidityPeriod',
 									itemId:'viberValidityPeriod',
-									fieldLabel:'Период доставки через канал Viber, сек.'
+									fieldLabel:'Период доставки через канал Viber, мин.'
 								},
 								{	name: 'voiceValidityPeriod',
 									itemId:'voiceValidityPeriod',
-									fieldLabel:'Период доставки через канал Voice, сек.'
+									fieldLabel:'Период доставки через канал Voice, мин.'
 								},
 								{	name: 'parsecoValidityPeriod',
 									itemId:'parsecoValidityPeriod',
-									fieldLabel:'Период доставки через канал Parseco, сек.'
+									fieldLabel:'Период доставки через канал Parseco, мин.'
+								},
+								{	name: 'facebookValidityPeriod',
+									itemId:'facebookValidityPeriod',
+									fieldLabel:'Период доставки через канал Parseco, мин.'
 								}
 							]
 						},

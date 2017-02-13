@@ -6,11 +6,11 @@ import java.util.List;
 
 public class InfobipObjects {
 
-    public class RequestError {
+    public static class RequestError {
 
         ServiceException serviceException;
         String error;
-        String errorType = "ERROR";
+        String errorType = "UNKNOWN_ERROR";
 
         public RequestError(String error){
             this.error = error;

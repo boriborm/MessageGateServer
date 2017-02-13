@@ -19,55 +19,70 @@ import java.util.List;
 
 public class MessageGenerator {
 
-    static final int MAX_MESSAGES=1000;
-
-    private static final int SCENARIO_OK = 1;
-    private static final int SCENARIO_INVALID = 2;
-
-    private static final int MESSAGE_TYPE_OK = 1;
-    private static final int MESSAGE_TYPE_INVALID = 2;
+    public static final int MAX_MESSAGES=1000;
 
     private static final Logger logger = LoggerFactory.getLogger(MessageGenerator.class);
 
-    static class VolumeException extends Exception
-    {
-        //Constructor that accepts a message
-        VolumeException(String message)
-        {
-            super(message);
-        }
-    }
 
-    public static MessageCreationResponseObject Generate(StatelessSession session, MessageCreationRequestObject data, User user, Long bulkId) throws VolumeException {
+    private StatelessSession session;
+    private Long bulkId;
+    private long userId;
+    private String userLogin;
+    private String infobipLogin;
+    private HashMap<String, Long> scCache = new HashMap<>();
+    private String msgPrefix;
 
-        Long userId = user.getId();
-        String msgPrefix = Config.getSettings().getMessageIdPrefix();
+    public MessageGenerator(User user, StatelessSession session, Long bulkId) {
+
+        this.userId = user.getId();
+        this.userLogin = user.getLogin();
+        this.session = session;
+        this.bulkId = bulkId;
+        this.infobipLogin = Config.getSettings().getInfobip().getLogin();
+
+        msgPrefix = Config.getSettings().getMessageIdPrefix();
         if (msgPrefix!=null&&msgPrefix.length()>0) msgPrefix = msgPrefix+"-";
         else msgPrefix = "";
+    }
+
+    public MessageCreationResponseObject generate(MessageCreationRequestObject data) {
 
         /* Проверим количество сообщений */
-        if (data.getMessages().size()>MAX_MESSAGES) throw new VolumeException("Количество сообщений не должно превышать "+MAX_MESSAGES);
+        if (data.getMessages().size()>MAX_MESSAGES){
+            return new MessageCreationResponseObject("Количество сообщений не должно превышать "+MAX_MESSAGES);
+        }
 
         List<MessageCreationResponseObject.SuccessMessage> successMessages = new ArrayList<>();
         List<MessageCreationResponseObject.FailedMessage> failedMessages = new ArrayList<>();
 
         //StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
 
-        //Проверка правильности ключа сценария
-        ScenarioDAO scenarioDAO = new ScenarioDAO(session);
+
+        /*
+        String scenarioKey;
+
+        if (data.getChannels()==null) {
+
+        } else{
+            scenarioDAO.getByChannels()
+        }
+
         String scenarioKey = data.getScenarioKey();
         if (scenarioKey==null) scenarioKey = Config.getSettings().getDefaultScenarioKey();
-        String infobipLogin = Config.getSettings().getInfobip().getLogin();
+
         Scenario scenario = scenarioDAO.getByKey(scenarioKey, infobipLogin);
         if ( scenario == null ){
             return new MessageCreationResponseObject("Сценарий не найден");
         }
-        scenario.parseFlow();
+
+        Long baseScenarioId = scenario.getId();
+*/
+        String baseChannels = data.getChannels();
 
         //Проверка правильности типа сообщения
         MessageTypeDAO msgTypeDAO = new MessageTypeDAO(session);
         String messageType = data.getMessageType();
-        if (messageType==null) messageType = Config.DEFAULT_MESSAGE_TYPE;
+        if (messageType==null) messageType = Config.getSettings().getDefaultMessageType();
 
         MessageType msgType = msgTypeDAO.getById(messageType);
 
@@ -80,22 +95,43 @@ public class MessageGenerator {
         }
 
         UserMessageTypeDAO userMessageTypeDAO = new UserMessageTypeDAO(session);
-        UserMessageType umt = userMessageTypeDAO.get(messageType, user.getId());
+        UserMessageType umt = userMessageTypeDAO.get(messageType, userId);
         if (umt == null){
-            return new MessageCreationResponseObject("У пользователя "+user.getLogin()+" нет доступа к типу сообщения " + messageType);
+            return new MessageCreationResponseObject("У пользователя " + userLogin + " нет доступа к типу сообщения " + messageType);
         }
 
 
-        boolean toSms = data.isToSms() && scenario.isSms() && msgType.isAcceptSms();
-        boolean toViber = data.isToViber() && scenario.isViber() && msgType.isAcceptViber();
-        boolean toVoice = data.isToVoice() && scenario.isVoice() && msgType.isAcceptVoice();
-        boolean toParseco = data.isToParseco() && scenario.isParseco() && msgType.isAcceptParseco();
 
+        /*
         if (!(toSms || toViber || toVoice || toParseco)) {
             return new MessageCreationResponseObject("Отсутствуют доступные каналы для рассылки");
         }
 
-        HashMap<String, PhoneGrant> phgCache = new HashMap<>();
+*/
+        /* Убираем из списка каналов те, который не разрешены типом сообщения */
+        if (!msgType.isAcceptSms()) baseChannels = baseChannels.replace("S","");
+        if (!msgType.isAcceptViber()) baseChannels = baseChannels.replace("V","");
+        if (!msgType.isAcceptVoice()) baseChannels = baseChannels.replace("O","");
+        if (!msgType.isAcceptParseco()) baseChannels = baseChannels.replace("P","");
+        if (!msgType.isAcceptFacebook()) baseChannels = baseChannels.replace("F","");
+
+        if (baseChannels.length()==0) {
+            return new MessageCreationResponseObject("Отсутствуют доступные каналы для рассылки");
+        }
+
+        /* Определяем подходящий сценарий по оставшимся типам сообщения */
+        ScenarioDAO scenarioDAO = new ScenarioDAO(session);
+        Scenario scenario = scenarioDAO.getByChannels(baseChannels, infobipLogin);
+        if ( scenario == null ){
+            return new MessageCreationResponseObject("Подходящий сценарий на каналы " + baseChannels + " не найден");
+        }
+
+        long baseScenarioId = scenario.getId();
+        boolean toSms = baseChannels.contains("S");
+        boolean toViber = baseChannels.contains("V");
+        boolean toVoice = baseChannels.contains("O");
+        boolean toParseco = baseChannels.contains("P");
+        boolean toFacebook = baseChannels.contains("F");
 
         //Список телефонов для выборки из PhoneGrant
         List<String> listPhones = new ArrayList<>();
@@ -121,6 +157,8 @@ public class MessageGenerator {
             listPhones.add(phone);
         }
 
+
+        HashMap<String, PhoneGrant> phgCache = new HashMap<>();
         /* Кэшируем гранты на телефоны */
         if(listPhones.size()>0) {
             Query phoneGrantsQuery = session.createQuery("From PhoneGrant pg where pg.phoneNumber in (:listPhones)")
@@ -134,6 +172,7 @@ public class MessageGenerator {
             results.close();
         }
 
+        // !!!!!!! Кэшируем данные по imsi с изменениями. Если они есть, то отбраковываем сообщения.
 
          /* Обрабатываем очищенные данные - сохраняем сообщения в БД */
         MessageDAO msgDAO = new MessageDAO(session);
@@ -150,9 +189,18 @@ public class MessageGenerator {
             boolean msgViber;
             boolean msgVoice;
             boolean msgParseco;
+            boolean msgFacebook;
+
+            String msgChannels;
+            long msgScenarioId;
+
+
 
             for (Iterator<MessageCreationRequestObject.Message> iterMessage = data.getMessages().listIterator(); iterMessage.hasNext(); ) {
                 MessageCreationRequestObject.Message message = iterMessage.next();
+
+                msgScenarioId = baseScenarioId;
+                msgChannels = baseChannels;
 
                 if (phgCache.containsKey(message.getPhoneNumber())){
                     PhoneGrant pg = phgCache.get(message.getPhoneNumber());
@@ -162,7 +210,9 @@ public class MessageGenerator {
                     msgViber = pg.isAcceptViber() && toViber;
                     msgVoice = pg.isAcceptVoice() && toVoice;
                     msgParseco = pg.isAcceptParseco() && toParseco;
-                    if (!(msgSms||msgViber||msgVoice||msgParseco)){
+                    msgFacebook = pg.isAcceptFacebook() && toFacebook;
+
+                    if (!(msgSms||msgViber||msgVoice||msgParseco||msgFacebook)){
                         iterMessage.remove();
                         failedMessages.add(
                                 new MessageCreationResponseObject.FailedMessage(
@@ -173,15 +223,45 @@ public class MessageGenerator {
                         iterMessage.remove();
                         continue;
                     }
+
+                    //Находим подходящий сценарий
+                    if (!msgSms) msgChannels=msgChannels.replace("S","");
+                    if (!msgViber) msgChannels=msgChannels.replace("V","");
+                    if (!msgVoice) msgChannels=msgChannels.replace("O","");
+                    if (!msgParseco) msgChannels=msgChannels.replace("P","");
+                    if (!msgFacebook) msgChannels=msgChannels.replace("F","");
+
+                    if (scCache.containsKey(msgChannels)){
+                        msgScenarioId = scCache.get(msgChannels);
+                    } else {
+
+                        Scenario sc = scenarioDAO.getByChannels(msgChannels, infobipLogin);
+                        if ( sc == null ) {
+                            iterMessage.remove();
+                            failedMessages.add(
+                                    new MessageCreationResponseObject.FailedMessage(
+                                            message.getMessageId(),
+                                            "Подходящий сценарий на каналы " + msgChannels + " не найден"
+                                    )
+                            );
+                            iterMessage.remove();
+                            continue;
+                        } else {
+                            msgScenarioId = sc.getId();
+                            scCache.put(msgChannels, msgScenarioId);
+                        }
+                    }
+
                 } else {
                     msgSms = toSms;
                     msgViber = toViber;
                     msgVoice = toVoice;
                     msgParseco = toParseco;
+                    msgFacebook = toFacebook;
                 }
 
                 Message msg = new Message();
-                msg.setScenarioId(scenario.getId());
+                msg.setScenarioId(msgScenarioId);
                 msg.setTypeId(messageType);
                 msg.setUserId(userId);
 
@@ -191,6 +271,7 @@ public class MessageGenerator {
                 if (msgViber) msg.setViberText(message.getViberText());
                 if (msgVoice) msg.setVoiceText(message.getVoiceText());
                 if (msgParseco) msg.setParsecoText(message.getParsecoText());
+                if (msgFacebook) msg.setFacebookText(message.getFacebookText());
 
                 msgDAO.add(msg);
 

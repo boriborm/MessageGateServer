@@ -20,10 +20,10 @@ public class Message implements Serializable {
 
     @Column (name="phoneNumber")
     private String phoneNumber;
-
+/*
     @Column (name="emailAddress")
     private String emailAddress;
-
+*/
     @Column (name="smsText")
     private String smsText;
 
@@ -36,9 +36,13 @@ public class Message implements Serializable {
     @Column (name="voiceText")
     private String voiceText;
 
+    @Column (name="facebookText")
+    private String facebookText;
+
+    /*
     @Column (name="emailText")
     private String emailText;
-
+*/
     @Column (name="scenarioId")
     private Long scenarioId;
 
@@ -50,10 +54,10 @@ public class Message implements Serializable {
 
     @Column (name="createDate")
     private Date createDate;
-
+/*
     @Column (name="emailSubject")
     private String emailSubject;
-
+*/
     @Column (name="externalId")
     private String externalId;
 
@@ -91,7 +95,7 @@ public class Message implements Serializable {
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
-
+/*
     public String getEmailAddress() {
         return emailAddress;
     }
@@ -99,7 +103,7 @@ public class Message implements Serializable {
     public void setEmailAddress(String emailAddress) {
         this.emailAddress = emailAddress;
     }
-
+*/
     public String getSmsText() {
         return smsText;
     }
@@ -155,21 +159,20 @@ public class Message implements Serializable {
     public void setSendAt(Date sendAt) {
         this.sendAt = sendAt;
     }
-
+/*
     public String getEmailSubject() {
         return emailSubject;
     }
-
     public void setEmailSubject(String emailSubject) {
         this.emailSubject = emailSubject;
     }
-
-    public String getEmailText() {
-        return emailText;
+*/
+    public String getFacebookText() {
+        return facebookText;
     }
 
-    public void setEmailText(String emailText) {
-        this.emailText = emailText;
+    public void setFacebookText(String facebookText) {
+        this.facebookText = facebookText;
     }
 
     public String getExternalId() {

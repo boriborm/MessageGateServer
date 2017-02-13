@@ -29,7 +29,7 @@ public class MessageTypes extends BaseServlet{
     @POST
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
-    public JsonObject create(MessageTypeObject messageType) {
+    public JsonObject create(MessageTypeObject messageTypeObject) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
@@ -46,22 +46,25 @@ public class MessageTypes extends BaseServlet{
         try {
 
             MessageType mt = new MessageType(
-                    messageType.getTypeId(),
-                    messageType.getDescription(),
-                    messageType.isAcceptSms(),
-                    messageType.isAcceptViber(),
-                    messageType.isAcceptVoice(),
-                    messageType.isAcceptParseco(),
-                    messageType.getSmsValidityPeriod(),
-                    messageType.getViberValidityPeriod(),
-                    messageType.getParsecoValidityPeriod(),
-                    messageType.getVoiceValidityPeriod(),
-                    messageType.isActive()
+                    messageTypeObject.getTypeId(),
+                    messageTypeObject.getDescription(),
+                    messageTypeObject.isAcceptSms(),
+                    messageTypeObject.isAcceptViber(),
+                    messageTypeObject.isAcceptVoice(),
+                    messageTypeObject.isAcceptParseco(),
+                    messageTypeObject.isAcceptFacebook(),
+                    messageTypeObject.getSmsValidityPeriod(),
+                    messageTypeObject.getViberValidityPeriod(),
+                    messageTypeObject.getParsecoValidityPeriod(),
+                    messageTypeObject.getVoiceValidityPeriod(),
+                    messageTypeObject.getFacebookValidityPeriod(),
+                    messageTypeObject.isActive(),
+                    messageTypeObject.isVerifyImsi()
             );
             dao.add(mt);
 
             session.getTransaction().commit();
-            json = new JsonObject(messageType);
+            json = new JsonObject(messageTypeObject);
 
         }catch (JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
@@ -80,7 +83,7 @@ public class MessageTypes extends BaseServlet{
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public JsonObject update(MessageTypeObject messageType, @PathParam("id") String id) {
+    public JsonObject update(MessageTypeObject messageTypeObject, @PathParam("id") String id) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
@@ -97,16 +100,19 @@ public class MessageTypes extends BaseServlet{
 
             MessageType mt = dao.getById(id);
 
-            mt.setDescription(messageType.getDescription());
-            mt.setAcceptSms(messageType.isAcceptSms());
-            mt.setAcceptViber(messageType.isAcceptViber());
-            mt.setAcceptVoice(messageType.isAcceptVoice());
-            mt.setAcceptParseco(messageType.isAcceptParseco());
-            mt.setSmsValidityPeriod(messageType.getSmsValidityPeriod());
-            mt.setViberValidityPeriod(messageType.getViberValidityPeriod());
-            mt.setParsecoValidityPeriod(messageType.getParsecoValidityPeriod());
-            mt.setVoiceValidityPeriod(messageType.getVoiceValidityPeriod());
-            mt.setActive(messageType.isActive());
+            mt.setDescription(messageTypeObject.getDescription());
+            mt.setAcceptSms(messageTypeObject.isAcceptSms());
+            mt.setAcceptViber(messageTypeObject.isAcceptViber());
+            mt.setAcceptVoice(messageTypeObject.isAcceptVoice());
+            mt.setAcceptParseco(messageTypeObject.isAcceptParseco());
+            mt.setAcceptFacebook(messageTypeObject.isAcceptFacebook());
+            mt.setSmsValidityPeriod(messageTypeObject.getSmsValidityPeriod());
+            mt.setViberValidityPeriod(messageTypeObject.getViberValidityPeriod());
+            mt.setParsecoValidityPeriod(messageTypeObject.getParsecoValidityPeriod());
+            mt.setVoiceValidityPeriod(messageTypeObject.getVoiceValidityPeriod());
+            mt.setFacebookValidityPeriod(messageTypeObject.getFacebookValidityPeriod());
+            mt.setActive(messageTypeObject.isActive());
+            mt.setVerifyImsi(messageTypeObject.isVerifyImsi());
 
             dao.save(mt);
 
@@ -130,7 +136,7 @@ public class MessageTypes extends BaseServlet{
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public JsonObject delete(MessageTypeObject messageType, @PathParam("id") String id) {
+    public JsonObject delete(MessageTypeObject messageTypeObject, @PathParam("id") String id) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
@@ -143,13 +149,13 @@ public class MessageTypes extends BaseServlet{
         //Проверяем наличие сообщений с таким типом
 
         List<FilterProperty> filterProperties = new ArrayList<>();
-        filterProperties.add(new FilterProperty("typeId", messageType.getTypeId()));
+        filterProperties.add(new FilterProperty("typeId", messageTypeObject.getTypeId()));
         Query query = Utils.createQuery(session,  "From Message where typeId=:typeId", 0, 1, filterProperties, null)
                 .setReadOnly(true);
         List result = query.list();
         System.out.println(result.size());
         if (result.size()>0){
-            throwException("Удаление невозможно. Тип сообщения \""+messageType.getTypeId()+"\" использован в сообщениях!");
+            throwException("Удаление невозможно. Тип сообщения \""+messageTypeObject.getTypeId()+"\" использован в сообщениях!");
         }
 
         session.getTransaction().begin();
@@ -217,12 +223,12 @@ public class MessageTypes extends BaseServlet{
                     .setReadOnly(true);
 
 
-            List<MessageTypeObject> messageTypes = new ArrayList<>();
+            List<MessageTypeObject> messageTypeObjects = new ArrayList<>();
 
             List hibernateMessageTypes =  query.list();
             for (Object hibernateMessageType:hibernateMessageTypes){
                 com.bankir.mgs.hibernate.model.MessageType mt = (com.bankir.mgs.hibernate.model.MessageType) hibernateMessageType;
-                messageTypes.add(
+                messageTypeObjects.add(
                         new MessageTypeObject(
                                 mt.getTypeId(),
                                 mt.getDescription(),
@@ -230,16 +236,19 @@ public class MessageTypes extends BaseServlet{
                                 mt.isAcceptViber(),
                                 mt.isAcceptParseco(),
                                 mt.isAcceptVoice(),
+                                mt.isAcceptFacebook(),
                                 mt.getSmsValidityPeriod(),
                                 mt.getViberValidityPeriod(),
                                 mt.getParsecoValidityPeriod(),
                                 mt.getVoiceValidityPeriod(),
-                                mt.isActive()
+                                mt.getFacebookValidityPeriod(),
+                                mt.isActive(),
+                                mt.isVerifyImsi()
                         )
                 );
             }
 
-            JsonObject json = new JsonObject(messageTypes);
+            JsonObject json = new JsonObject(messageTypeObjects);
             json.setTotal(countResults);
 
             session.close();
@@ -251,5 +260,4 @@ public class MessageTypes extends BaseServlet{
             return new JsonObject(e.getMessage());
         }
     }
-
 }

@@ -26,3 +26,21 @@ div.page-header {
 	padding-left:20px;
 	line-height:35px;
 }
+.description {
+	font-size:18px;
+	font-weight:bold;
+	color:#888;
+	line-height:22px;
+}
+
+.send-one-to-all-panel .data-field textarea {
+	font-size:18px;
+}
+
+.send-one-to-all-panel .data-field input[type="text"] {
+	font-size:18px;
+}
+
+.big-header .x-title-text {
+	font-size:18px;
+}

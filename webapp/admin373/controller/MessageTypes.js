@@ -32,7 +32,9 @@ Ext.define('admins.controller.MessageTypes', {
 						acceptViber: false,
 						acceptVoice: false,
 						acceptParseco: false,
-						active: false
+						acceptFacebook: false,
+						active: false,
+						verifyImsi:false
 					});
 					/* Поскольку мы заполними Id записи в typeId, то движок будет думать, что это серверная запись и
 					 * будет запускать update, а не create. Для этого помечаем запись как фантомную, чтобы она сохранялась как новая через create */

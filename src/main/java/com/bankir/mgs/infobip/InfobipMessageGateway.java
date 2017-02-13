@@ -2,10 +2,7 @@ package com.bankir.mgs.infobip;
 
 import com.bankir.mgs.Config;
 import com.bankir.mgs.Settings;
-import com.bankir.mgs.infobip.model.DeliveryReport;
-import com.bankir.mgs.infobip.model.MessagesResponse;
-import com.bankir.mgs.infobip.model.OmniAdvancedMessage;
-import com.bankir.mgs.infobip.model.RequestError;
+import com.bankir.mgs.infobip.model.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.eclipse.jetty.client.HttpClient;
@@ -31,11 +28,28 @@ import java.util.concurrent.TimeoutException;
 
 public class InfobipMessageGateway {
     private static final Logger logger = LoggerFactory.getLogger(InfobipMessageGateway.class);
-    private String url;
+
+    //private String url;
     private HttpClient httpClient;
     private String authorization;
     private static final int  timeOut = 15;
     private static Gson gson;
+
+
+    public enum ConnectionErrors  {UNKNOWN_ERROR, URL_ERROR, PROXY_ERROR, AUTH_ERROR, INTERRUPTED, TIMEOUT };
+
+    public static class RequestErrorException extends Exception {
+        private ConnectionErrors type;
+
+        public RequestErrorException(String message, ConnectionErrors type) {
+            super(message);
+            this.type = type;
+        }
+
+        public ConnectionErrors getType() {
+            return type;
+        }
+    }
 
     public InfobipMessageGateway() throws Exception {
         Settings settings = Config.getSettings();
@@ -63,7 +77,6 @@ public class InfobipMessageGateway {
             proxyConfig.getProxies().add(Config.getProxy());
         }
 
-
         httpClient.start();
 
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -83,83 +96,92 @@ public class InfobipMessageGateway {
         }
     }
 
-    public MessagesResponse sendAdvancedMessage(OmniAdvancedMessage advMsg) {
+    public MessagesResponse sendAdvancedMessage(OmniAdvancedMessage advMsg) throws RequestErrorException {
 
-        MessagesResponse result;
         Settings settings = Config.getSettings();
         String url = settings.getInfobip().getSendMessageUrl();
-        String jsonStr = gson.toJson(advMsg);
-        ContentResponse response = null;
-        try {
-            response = sendMessage(HttpMethod.POST, url, jsonStr);
-            result = gson.fromJson(response.getContentAsString(), MessagesResponse.class);
-        } catch (InterruptedException e) {
-            logger.error("sendAdvancedMessage interrupt exception");
-            result = new MessagesResponse();
-            RequestError requestError = new RequestError(e.getMessage(), "INTERRUPT_ERROR");
-            result.setRequestError(requestError);
-        } catch (ExecutionException e) {
-            logger.error("sendAdvancedMessage execution exception");
-            result = new MessagesResponse();
-            RequestError requestError = new RequestError(e.getMessage(), getErrorType(e.getMessage()));
-            result.setRequestError(requestError);
-        } catch (TimeoutException e) {
-            logger.error("sendAdvancedMessage timeout exception");
-            result = new MessagesResponse();
-            RequestError requestError = new RequestError(e.getMessage(), "TIMEOUT_ERROR");
-            result.setRequestError(requestError);
+
+        if (url==null) {
+            logger.error("send advanced message url not set");
+            throw new RequestErrorException("send advanced message url not set", ConnectionErrors.URL_ERROR);
         }
 
-        // Парсим ответ в JsonObject и отдаём
-        return result;
+        String jsonStr = gson.toJson(advMsg);
+        ContentResponse response = sendMessage(HttpMethod.POST, url, jsonStr);
+        return gson.fromJson(response.getContentAsString(), MessagesResponse.class);
     }
 
-    public ContentResponse sendMessage(HttpMethod method, String url, String content) throws InterruptedException, ExecutionException, TimeoutException {
+    public DeliveryReport getReport() throws RequestErrorException {
 
-            logger.debug("Send message");
+        Settings settings = Config.getSettings();
+        String url = settings.getInfobip().getReportsUrl();
+
+        if (url==null) {
+            logger.error("Delivery report url not set");
+            throw new RequestErrorException("Delivery report url not set", ConnectionErrors.URL_ERROR);
+        }
+
+        ContentResponse response = sendMessage(HttpMethod.GET, url, null);
+        return gson.fromJson(response.getContentAsString(), DeliveryReport.class);
+
+    }
+
+
+
+    public ImsiResponse getImsi(ImsiRequest imsiRequest) throws RequestErrorException {
+
+        Settings settings = Config.getSettings();
+        String url = settings.getInfobip().getImsiUrl();
+
+        if (url==null) {
+            logger.error("getImsi url not set");
+            throw new RequestErrorException("Imsi url not set", ConnectionErrors.URL_ERROR);
+        }
+
+        String jsonStr = gson.toJson(imsiRequest);
+        ContentResponse response = sendMessage(HttpMethod.POST, url, jsonStr);
+        return gson.fromJson(response.getContentAsString(), ImsiResponse.class);
+    }
+
+    public ContentResponse sendMessage(HttpMethod method, String url, String content) throws RequestErrorException {
+
+        logger.debug("Send message");
+        ContentResponse response;
+        try {
+
             Request request = httpClient.newRequest(url)
                     .method(method)
                     .agent("MessageGateServer HTTP client")
                     .version(HttpVersion.HTTP_1_1)
                     .timeout(timeOut, TimeUnit.SECONDS)
-                    .header(HttpHeader.AUTHORIZATION, "Basic "+authorization)
+                    .header(HttpHeader.AUTHORIZATION, "Basic " + authorization)
                     .header(HttpHeader.CONTENT_TYPE, MediaType.APPLICATION_JSON);
-            if (content!=null){
+
+            if (content != null) {
 
                 logger.debug("Message content: {}", content);
                 request = request.content(new StringContentProvider(content));
             }
 
-            ContentResponse response = request.send();
-            logger.debug("Response status: {}, Type: {}", response.getStatus(), response.getMediaType());
-            logger.debug("Response content: {}", new String (response.getContent()));
-            return response;
-    }
+            response = request.send();
 
-
-    public DeliveryReport getReport(){
-
-        DeliveryReport result;
-
-        Settings settings = Config.getSettings();
-        String url = settings.getInfobip().getReportsUrl();
-
-        try {
-            ContentResponse response = sendMessage(HttpMethod.GET, url, null);
-            result = gson.fromJson(response.getContentAsString(), DeliveryReport.class);
-        } catch (InterruptedException | TimeoutException | ExecutionException e) {
-            logger.error("Error: "+ e.getMessage(), e);
-            result = null;
+        } catch (InterruptedException e) {
+            throw new RequestErrorException(e.getMessage(), ConnectionErrors.INTERRUPTED);
+        } catch (ExecutionException e) {
+            throw new RequestErrorException(e.getMessage(),getErrorType(e.getMessage()));
+        } catch (TimeoutException e) {
+            throw new RequestErrorException(e.getMessage(), ConnectionErrors.TIMEOUT);
         }
 
-        return result;
-
+        logger.debug("Response status: {}, Type: {}", response.getStatus(), response.getMediaType());
+        logger.debug("Response content: {}", new String (response.getContent()));
+        return response;
     }
 
-    private static String getErrorType(String error){
-        String result = "ERROR";
-        if (error.startsWith("HTTP protocol violation: Authentication challenge without")) result = "AUTH_ERROR";
-        if (error.startsWith("HTTP/1.1 407 Proxy Authentication Required")) result = "PROXY_ERROR";
+    private static ConnectionErrors getErrorType(String error){
+        ConnectionErrors result = ConnectionErrors.UNKNOWN_ERROR;
+        if (error.contains("HTTP protocol violation: Authentication challenge without")) result = ConnectionErrors.AUTH_ERROR;
+        if (error.contains("HTTP/1.1 407 Proxy Authentication Required")) result = ConnectionErrors.PROXY_ERROR;
         return result;
     }
 }

@@ -11,7 +11,6 @@ import com.bankir.mgs.infobip.model.InfobipObjects;
 import com.bankir.mgs.jersey.model.JsonObject;
 import com.bankir.mgs.jersey.model.ScenarioObject;
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpMethod;
 import org.hibernate.JDBCException;
@@ -22,7 +21,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
-import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -87,13 +85,11 @@ public class Scenarios extends BaseServlet {
         //Сохраняем данные сценария в БД
         ScenarioDAO scDao = new ScenarioDAO(session);
 
-        String flow = gson.toJson(scenario.getFlow());
-
         try {
             Long scenarioId = scDao.addScenario(
                     newScenarioKey,
                     infobipScenario.getName(),
-                    flow,
+                    scenario.getFlow(),
                     scenario.isActive(),
                     Config.getSettings().getInfobip().getLogin()
             );
@@ -170,9 +166,7 @@ public class Scenarios extends BaseServlet {
                 listFlow.add(new ScenarioObject.Flow(infobipFlow.getChannel(), infobipFlow.getFrom()));
             }
 
-            String flow = gson.toJson(listFlow);
-            hibernateScenario.setFlow(flow);
-
+            hibernateScenario.setFlow(listFlow);
             scDao.save(hibernateScenario);
             session.getTransaction().commit();
             scenario = getScenario(hibernateScenario);
@@ -208,13 +202,6 @@ public class Scenarios extends BaseServlet {
             throwException("Необходимо задать имя сценария");
         }
 
-        /* Если имя сценария не задали, то выводим обшибку */
-        if (scenario.getName()==null){
-            throwException("Необходимо задать имя сценария");
-        }
-
-        JsonObject json = null;
-
         // Обновляем данные сценария в Инфобипе
         InfobipMessageGateway ims = null;
         InfobipObjects.Scenario infobipScenario = null;
@@ -249,8 +236,7 @@ public class Scenarios extends BaseServlet {
             scenarioInBD = scDao.getById(scenarioId);
             //Обновляем сведения о имени сценария в объекте
             scenarioInBD.setScenarioName(scenario.getName());
-            String flow = gson.toJson(scenario.getFlow());
-            scenarioInBD.setFlow(flow);
+            scenarioInBD.setFlow(scenario.getFlow());
             scenarioInBD.setActive(scenario.isActive());
             scenarioInBD.setInfobipLogin(Config.getSettings().getInfobip().getLogin());
 
@@ -347,9 +333,7 @@ public class Scenarios extends BaseServlet {
                 hibernateScenario.isActive(),
                 (hibernateScenario.getScenarioKey().equalsIgnoreCase(Config.getSettings().getDefaultScenarioKey()))
         );
-        Type listType = new TypeToken<ArrayList<ScenarioObject.Flow>>(){}.getType();
-        List<ScenarioObject.Flow> flows = gson.fromJson(hibernateScenario.getFlow(), listType);
-        scenario.setFlow(flows);
+        scenario.setFlow(hibernateScenario.getFlow());
         return scenario;
     }
 

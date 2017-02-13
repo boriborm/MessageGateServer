@@ -19,6 +19,8 @@ public class MgsApp
 {
     public static void main(String[] args) throws Exception {
 
+        System.out.println(Character.isUnicodeIdentifierPart('.'));
+
         Logger logger = LoggerFactory.getLogger(MgsApp.class);
         logger.info("Start application");
         try {
@@ -65,7 +67,7 @@ public class MgsApp
 
             if (Config.INFOBIP_AUTHORIZATION != null) {
             /* Стартуем поток для рассылки сообщений из очереди */
-                //QueueProcessor.getInstance().startProcessor("APP");
+                QueueProcessor.getInstance().startProcessor("APP");
             /* Стартуем поток для получения отчетов о доставке */
                 DeliveryReportProcessor.getInstance().startProcessor("APP");
             }

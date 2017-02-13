@@ -3,9 +3,12 @@ package com.bankir.mgs.hibernate.dao;
 
 import com.bankir.mgs.hibernate.impl.ScenarioImpl;
 import com.bankir.mgs.hibernate.model.Scenario;
+import com.bankir.mgs.jersey.model.ScenarioObject;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
+
+import java.util.List;
 
 public class ScenarioDAO implements ScenarioImpl {
 
@@ -34,6 +37,15 @@ public class ScenarioDAO implements ScenarioImpl {
         return scenario;
     }
 
+    public Scenario getByChannels(String channels, String infobipLogin) throws JDBCException {
+        Query query = session.createQuery("from Scenario where channels = :channels and infobipLogin = :login")
+                .setParameter("channels", channels)
+                .setParameter("login", infobipLogin);
+        Scenario scenario = (Scenario) query.getSingleResult();
+        scenario.parseFlow();
+        return scenario;
+    }
+
     @Override
     public Scenario getById(Long id) throws JDBCException {
         Scenario scenario = (Scenario) session.get(Scenario.class, id);
@@ -46,8 +58,8 @@ public class ScenarioDAO implements ScenarioImpl {
         session.delete(row);
     }
 
-    public Long addScenario(String scenarioKey, String scenarioName, String flow, boolean isActive, String login) throws JDBCException {
-        Scenario newScenario = new Scenario(scenarioKey, scenarioName, flow, isActive, login);
+    public Long addScenario(String scenarioKey, String scenarioName, List<ScenarioObject.Flow> flows, boolean isActive, String login) throws JDBCException {
+        Scenario newScenario = new Scenario(scenarioKey, scenarioName, flows, isActive, login);
         this.add(newScenario);
         return newScenario.getId();
     }

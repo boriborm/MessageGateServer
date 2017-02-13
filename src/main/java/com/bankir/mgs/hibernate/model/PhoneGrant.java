@@ -32,6 +32,10 @@ public class PhoneGrant implements Serializable {
     @Column
     private boolean acceptParseco;
 
+    @Type(type="yes_no")
+    @Column
+    private boolean acceptFacebook;
+
     public String getPhoneNumber() {
         return phoneNumber;
     }
@@ -41,6 +45,7 @@ public class PhoneGrant implements Serializable {
         this.acceptViber = false;
         this.acceptParseco = false;
         this.acceptVoice = false;
+        this.acceptFacebook = false;
     };
 
     public void setPhoneNumber(String phoneNumber) {
@@ -77,5 +82,13 @@ public class PhoneGrant implements Serializable {
 
     public void setAcceptParseco(boolean acceptParseco) {
         this.acceptParseco = acceptParseco;
+    }
+
+    public boolean isAcceptFacebook() {
+        return acceptFacebook;
+    }
+
+    public void setAcceptFacebook(boolean acceptFacebook) {
+        this.acceptFacebook = acceptFacebook;
     }
 }

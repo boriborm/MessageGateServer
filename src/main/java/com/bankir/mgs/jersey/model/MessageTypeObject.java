@@ -8,24 +8,30 @@ public class MessageTypeObject {
     private boolean acceptViber;
     private boolean acceptVoice;
     private boolean acceptParseco;
+    private boolean acceptFacebook;
     private Integer smsValidityPeriod;
     private Integer viberValidityPeriod;
     private Integer parsecoValidityPeriod;
     private Integer voiceValidityPeriod;
+    private Integer facebookValidityPeriod;
     private boolean active;
+    private boolean verifyImsi;
 
-    public MessageTypeObject(String typeId, String description, boolean acceptSms, boolean acceptViber, boolean acceptVoice, boolean acceptParseco, Integer smsValidityPeriod, Integer viberValidityPeriod, Integer parsecoValidityPeriod, Integer voiceValidityPeriod, boolean active) {
+    public MessageTypeObject(String typeId, String description, boolean acceptSms, boolean acceptViber, boolean acceptVoice, boolean acceptParseco, boolean acceptFacebook, Integer smsValidityPeriod, Integer viberValidityPeriod, Integer parsecoValidityPeriod, Integer voiceValidityPeriod, Integer facebookValidityPeriod, boolean active, boolean verifyImsi) {
         this.typeId = typeId;
         this.description = description;
         this.acceptSms = acceptSms;
         this.acceptViber = acceptViber;
         this.acceptVoice = acceptVoice;
         this.acceptParseco = acceptParseco;
+        this.acceptFacebook = acceptFacebook;
         this.smsValidityPeriod = smsValidityPeriod;
         this.viberValidityPeriod = viberValidityPeriod;
         this.parsecoValidityPeriod = parsecoValidityPeriod;
         this.voiceValidityPeriod = voiceValidityPeriod;
+        this.facebookValidityPeriod = facebookValidityPeriod;
         this.active = active;
+        this.verifyImsi = verifyImsi;
     }
 
     public String getTypeId() {
@@ -70,5 +76,17 @@ public class MessageTypeObject {
 
     public boolean isActive() {
         return active;
+    }
+
+    public boolean isVerifyImsi() {
+        return verifyImsi;
+    }
+
+    public boolean isAcceptFacebook() {
+        return acceptFacebook;
+    }
+
+    public Integer getFacebookValidityPeriod() {
+        return facebookValidityPeriod;
     }
 }

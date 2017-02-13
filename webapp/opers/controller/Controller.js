@@ -2,8 +2,8 @@ Ext.define('opers.controller.Controller', {
 	extend: 'Ext.app.Controller',
 
 	views: ['Messages','SendOneToAll','PhoneGrants'],
-	stores:['Messages', 'MessageTypes', 'Scenarios', 'Reports','PhoneGrants','Bulks'],
-	models:['Message','MessageType', 'Scenario', 'Report','PhoneGrant','Bulk'],
+	stores:['Messages', 'MessageTypes', 'Scenarios', 'Reports','PhoneGrants','Bulks','Channels'],
+	models:['Message','MessageType', 'Scenario', 'Report','PhoneGrant','Bulk','Channel'],
 
 	init: function(){
 		var me = this;
