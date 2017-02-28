@@ -127,8 +127,17 @@ Ext.define('opers.controller.SendOneToAll', {
 			});
 			
 			var store = me.lookupReference('gridPhones').getStore();
+			var cnt = store.getCount();
+			
+			if (cnt + validPhones.length >1000){
+				Ext.Msg.alert('Внимание', 'Максимальное количество получателей - 1000!');
+			}		
+			
 			validPhones.forEach(function(phone, index, array){
-				if (store.find("phone", phone)==-1) store.add({phone:phone});
+				if (cnt<1000 && store.find("phone", phone)==-1){
+					 store.add({phone:phone});
+					 cnt++;
+				 }
 			});
 			
 			var restPhones = "";
@@ -146,19 +155,25 @@ Ext.define('opers.controller.SendOneToAll', {
 		var me = this,
 			dataPanel = me.lookupReference('dataPanel');
 		
-		if (!dataPanel.isValid()) return;
-		
-		console.log(me);
+		if (!dataPanel.isValid()) return;		
 		
 		var phoneStore = me.lookupReference('gridPhones').getStore();
 		if (phoneStore.getCount()==0){		
 			return;
 		}
+		
+		if (phoneStore.getCount() >1000){
+			Ext.Msg.alert('Внимание', 'Максимальное количество получателей - 1000!');
+			return;
+		}		
+
+		
+		
 		var channelsStore = me.lookupReference('gridChannels').getStore();
 		if (channelsStore.getCount()==0){
 			Ext.Msg.alert('Ошибка', 'Добавьте канал');
 			return;
-		}
+		}		
 
 		var channels = '';
 		channelsStore.each(function(rec) { channels += rec.get('channel'); });
@@ -211,6 +226,15 @@ Ext.define('opers.controller.SendOneToAll', {
 						phoneStore.remove(rec);
 						phoneStore.commitChanges();
 					});
+					
+					var layout = me.lookupReference('dataPanel').getLayout();
+					
+					if (jResponse.failedMessages.length>0){
+						layout.setActiveItem('step-3');
+					} else{
+						layout.setActiveItem('step-1');
+					}
+					
 				} else {
 					Ext.Msg.alert('Ошибка', jResponse.message);
 				}

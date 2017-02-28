@@ -103,8 +103,10 @@ public class UserMessageTypes extends BaseServlet{
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
+        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+        JsonObject json;
         try {
-            StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
 
             UserMessageTypeDAO dao = new UserMessageTypeDAO(session);
             List<UserMessageTypeObject> userMessageTypes = new ArrayList<>();
@@ -117,16 +119,15 @@ public class UserMessageTypes extends BaseServlet{
                 );
             }
 
-            JsonObject json = new JsonObject(userMessageTypes);
+            json = new JsonObject(userMessageTypes);
             json.setTotal(((Integer) userMessageTypes.size()).longValue());
 
-            session.close();
-
-            return json;
         }catch(Exception e){
             logger.error("Error: "+e.getMessage(), e);
-            return new JsonObject(e.getMessage());
+            json = new JsonObject(e.getMessage());
         }
+        session.close();
+        return json;
     }
 
 }

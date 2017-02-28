@@ -4,6 +4,8 @@ import com.bankir.mgs.Authorization;
 import com.bankir.mgs.BasicAuth;
 import com.bankir.mgs.Config;
 import com.bankir.mgs.User;
+import com.bankir.mgs.hibernate.dao.UserDAO;
+import org.hibernate.StatelessSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,6 +76,15 @@ public class RestAuthorizationFilter implements ContainerRequestFilter {
                     }
 
                 }
+            } else {
+
+                /* Проверяем, вдруг пользователя уже блокировали или удалили */
+                StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+                UserDAO userDAO = new UserDAO(session);
+                com.bankir.mgs.hibernate.model.User usr = userDAO.getByLogin(user.getLogin());
+                if (usr==null||usr.isLocked()) user = Config.ANONYMOUS_USER;
+                session.close();
+
             }
         }
         String scheme = requestContext.getUriInfo().getRequestUri().getScheme();

@@ -117,8 +117,10 @@ public class Messages extends BaseServlet {
 
         List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
 
+        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+        JsonObject json;
         try {
-            StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
 
             String countQ = "Select count (m.id) " + hql;
             Query countQuery = Utils.createQuery(session, countQ, null, null, filterProperties, null);
@@ -177,17 +179,18 @@ public class Messages extends BaseServlet {
             }
             results.close();
 
-            JsonObject json = new JsonObject(messages);
+            json = new JsonObject(messages);
             json.setTotal(countResults);
 
-            session.close();
 
 
-            return json;
         }catch(JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            return new JsonObject(e.getSQLException().getMessage());
+            json = new JsonObject(e.getSQLException().getMessage());
         }
+
+        session.close();
+        return json;
     }
 
     private static void setDatePropertyTime(List<FilterProperty> filterProperties, String propertyName, Date defaultDate, int h, int m, int s){

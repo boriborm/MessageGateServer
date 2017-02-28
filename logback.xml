@@ -123,6 +123,6 @@
 
     <!-- По умолчанию вывод в файл other.log только ошибок-->
     <root level="DEBUG">
-        <appender-ref ref="FILE" />
+        <appender-ref ref="STDOUT" />
     </root>
 </configuration>

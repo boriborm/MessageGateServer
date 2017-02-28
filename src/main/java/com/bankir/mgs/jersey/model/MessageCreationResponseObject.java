@@ -39,7 +39,7 @@ public class MessageCreationResponseObject extends JsonObject{
 
     public static class SuccessMessage {
         private String messageId;
-        private String message;
+        //private String message;
         private String externalId;
 
         public SuccessMessage(String messageId, String externalId) {

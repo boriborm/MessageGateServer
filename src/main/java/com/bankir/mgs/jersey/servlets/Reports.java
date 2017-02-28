@@ -50,6 +50,7 @@ public class Reports extends BaseServlet{
             return json;
         }
 
+        System.out.println("Start create report");
         StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
 
         try {
@@ -64,15 +65,22 @@ public class Reports extends BaseServlet{
 
             filterProperties.add(new FilterProperty("messageId", messageId));
 
+            System.out.println("create count query");
+
             String countQ = "SELECT count (r.id) " + hqlFrom + hqlWhere;
             Query countQuery = Utils.createQuery(session, countQ, null, null, filterProperties, null);
             Long countResults = (Long) countQuery.uniqueResult();
+
+
+            System.out.println("create data query");
 
             Query query = Utils.createQuery(session,  hqlFrom + hqlWhere, start, limit, filterProperties, sorterProperties)
                     .setReadOnly(true);
             ScrollableResults results = query.scroll(ScrollMode.FORWARD_ONLY);
 
             List<ReportObject> reports = new ArrayList<>();
+
+            System.out.println("write data to response object");
 
             while (results.next()) {
                 Report report = (Report) results.get(0);
@@ -98,12 +106,14 @@ public class Reports extends BaseServlet{
             json = new JsonObject(reports);
             json.setTotal(countResults);
 
-            return json;
         }catch(JDBCException e){
             logger.error("Error: " + e.getSQLException().getMessage(), e);
+            System.out.println("error:"+e.getSQLException().getMessage());
             json = new JsonObject(e.getSQLException().getMessage());
         }
         session.close();
+
+        System.out.println("Stop create report");
         return json;
     }
 

@@ -226,8 +226,9 @@ public class Users extends BaseServlet{
         Query query = Utils.createQuery(session,  "From Message where userId=:userId", 0, 1, filterProperties, null)
                 .setReadOnly(true);
         List result = query.list();
-        System.out.println(result.size());
+
         if (result.size()>0){
+            session.close();
             throwException("Удаление невозможно. Идентификатор пользователя использован в сообщениях!");
         }
 

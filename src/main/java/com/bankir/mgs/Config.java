@@ -209,7 +209,7 @@ public class Config {
                     cfg.getProperties().setProperty(property.getName(), property.getValue());
                 }
             }
-            cfg.getProperties().setProperty("show_sql", "true");
+
             hibernateSessionFactory = cfg.buildSessionFactory();
 
 

@@ -31,8 +31,10 @@ public class Channels extends BaseServlet{
         /* Авторизация пользователя по роли */
         authorizeOrThrow(viewChannelsRoles);
 
+        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+        JsonObject json;
         try {
-            StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
 
             List<FilterProperty> filterProperties = new ArrayList<>();
 
@@ -69,16 +71,15 @@ public class Channels extends BaseServlet{
             if (channels.contains("O")) channelObjects.add(new ChannelObject("O", "VOICE"));
             if (channels.contains("F")) channelObjects.add(new ChannelObject("F", "FACEBOOK"));
 
-            JsonObject json = new JsonObject(channelObjects);
+            json = new JsonObject(channelObjects);
             json.setTotal((long) channels.length());
-
-            session.close();
-
 
             return json;
         }catch(Exception e){
             logger.error("Error: "+e.getMessage(), e);
-            return new JsonObject(e.getMessage());
+            json = new JsonObject(e.getMessage());
         }
+        session.close();
+        return json;
     }
 }

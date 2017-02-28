@@ -34,8 +34,10 @@ public class Bulks extends BaseServlet{
         //Если фильтр не задан, возвращаем пустой список
         if (q==null||q.length()==0) return new JsonObject(true);
 
+        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+        JsonObject json;
         try {
-            StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
 
             String hqlFrom = " FROM Bulk b";
             String hqlWhere = " where upper(b.description) like upper(:query)";
@@ -47,16 +49,18 @@ public class Bulks extends BaseServlet{
             Query query = Utils.createQuery(session,  hqlFrom + hqlWhere, 0, 30, filterProperties, null)
                     .setReadOnly(true);
 
-            JsonObject json = new JsonObject(query.list());
+            json = new JsonObject(query.list());
 
-            session.close();
+
 
 
             return json;
         }catch(Exception e){
             logger.error("Error: "+e.getMessage());
-            return new JsonObject(e.getMessage());
+            json = new JsonObject(e.getMessage());
         }
+        session.close();
+        return json;
     }
 
 }
