@@ -36,7 +36,7 @@ public class InfobipMessageGateway {
     private static Gson gson;
 
 
-    public enum ConnectionErrors  {UNKNOWN_ERROR, URL_ERROR, PROXY_ERROR, AUTH_ERROR, INTERRUPTED, TIMEOUT };
+    public enum ConnectionErrors  {UNKNOWN_ERROR, URL_ERROR, PROXY_ERROR, AUTH_ERROR, INTERRUPTED, CONNECTION_ERROR, TIMEOUT };
 
     public static class RequestErrorException extends Exception {
         private ConnectionErrors type;
@@ -96,7 +96,7 @@ public class InfobipMessageGateway {
         }
     }
 
-    public MessagesResponse sendAdvancedMessage(OmniAdvancedMessage advMsg) throws RequestErrorException {
+    public MessagesResponse sendAdvancedMessage(InfobipObjects.OmniAdvancedMessage advMsg) throws RequestErrorException {
 
         Settings settings = Config.getSettings();
         String url = settings.getInfobip().getSendMessageUrl();
@@ -149,6 +149,7 @@ public class InfobipMessageGateway {
         ContentResponse response;
         try {
 
+
             Request request = httpClient.newRequest(url)
                     .method(method)
                     .agent("MessageGateServer HTTP client")
@@ -165,6 +166,8 @@ public class InfobipMessageGateway {
 
             response = request.send();
 
+
+
         } catch (InterruptedException e) {
             throw new RequestErrorException(e.getMessage(), ConnectionErrors.INTERRUPTED);
         } catch (ExecutionException e) {
@@ -175,6 +178,7 @@ public class InfobipMessageGateway {
 
         logger.debug("Response status: {}, Type: {}", response.getStatus(), response.getMediaType());
         logger.debug("Response content: {}", new String (response.getContent()));
+
         return response;
     }
 
@@ -182,6 +186,8 @@ public class InfobipMessageGateway {
         ConnectionErrors result = ConnectionErrors.UNKNOWN_ERROR;
         if (error.contains("HTTP protocol violation: Authentication challenge without")) result = ConnectionErrors.AUTH_ERROR;
         if (error.contains("HTTP/1.1 407 Proxy Authentication Required")) result = ConnectionErrors.PROXY_ERROR;
+        if (error.contains("java.net.ConnectException")) result = ConnectionErrors.CONNECTION_ERROR;
+
         return result;
     }
 }

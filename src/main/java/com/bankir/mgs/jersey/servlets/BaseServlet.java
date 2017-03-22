@@ -26,6 +26,17 @@ abstract class BaseServlet {
 
     void authorizeOrThrow(String[] roles){
         this.user = (User) securityContext.getUserPrincipal();
+
+        String token = request.getHeader("User-Token");
+
+        if ( !user.getUserToken().equals(token) &&
+             !user.userWithRole(User.ROLE_RESTSERVICE)
+           ){
+            throw new WebApplicationException(
+                    JsonObject.getErrorResponse(Response.Status.FORBIDDEN, Config.MSG_FORBIDDEN)
+            );
+        }
+
         boolean hasRole = false;
         for (String role : roles){
             if (this.user.userWithRole(role)) {
@@ -40,6 +51,7 @@ abstract class BaseServlet {
         }
 
     }
+
 /*
     static Date dateFromString(String dateInString) throws ParseException {
         //SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");

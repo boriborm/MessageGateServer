@@ -228,6 +228,7 @@ public class Users extends BaseServlet{
         List result = query.list();
 
         if (result.size()>0){
+
             session.close();
             throwException("Удаление невозможно. Идентификатор пользователя использован в сообщениях!");
         }

@@ -1,5 +1,11 @@
 {
   "port":8080,
+  "sslConfig":{
+    "keystorePath":"/home/bankir/IdeaProjects/MessageGateServer/keystore/mgskeystore",
+    "keystorePassword":"password",
+    "keyPassword":"password",
+    "port":8443
+  },
   "useProxy":true,
   "useFileProcessor":false,
   "adminPath":"/admin/",

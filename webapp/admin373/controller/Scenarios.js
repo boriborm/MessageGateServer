@@ -91,7 +91,7 @@ Ext.define('admins.controller.Scenarios', {
 			me.lookupReference('channelsGrid').getStore().each(function(rec) {
 					fieldValues.flow.push(rec.data);
 			});
-						
+
 			record.set(fieldValues);
 			me.currentRecord = record;			
 			if (record.dirty) me.getView().getEl().mask('Сохранение данных...');

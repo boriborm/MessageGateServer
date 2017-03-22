@@ -56,6 +56,9 @@ public class Messages extends BaseServlet {
         }
 
         session.close();
+
+        if (user.userWithRole(User.ROLE_RESTSERVICE)) request.getSession().invalidate();
+
         return response;
     }
 

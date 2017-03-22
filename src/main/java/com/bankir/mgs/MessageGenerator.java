@@ -1,5 +1,6 @@
 package com.bankir.mgs;
 
+import com.bankir.mgs.hibernate.AcceptChannels;
 import com.bankir.mgs.hibernate.dao.*;
 import com.bankir.mgs.hibernate.model.*;
 import com.bankir.mgs.jersey.model.MessageCreationRequestObject;
@@ -100,20 +101,8 @@ public class MessageGenerator {
             return new MessageCreationResponseObject("У пользователя " + userLogin + " нет доступа к типу сообщения " + messageType);
         }
 
-
-
-        /*
-        if (!(toSms || toViber || toVoice || toParseco)) {
-            return new MessageCreationResponseObject("Отсутствуют доступные каналы для рассылки");
-        }
-
-*/
         /* Убираем из списка каналов те, который не разрешены типом сообщения */
-        if (!msgType.isAcceptSms()) baseChannels = baseChannels.replace("S","");
-        if (!msgType.isAcceptViber()) baseChannels = baseChannels.replace("V","");
-        if (!msgType.isAcceptVoice()) baseChannels = baseChannels.replace("O","");
-        if (!msgType.isAcceptParseco()) baseChannels = baseChannels.replace("P","");
-        if (!msgType.isAcceptFacebook()) baseChannels = baseChannels.replace("F","");
+        baseChannels = channelsAnd(baseChannels, msgType);
 
         if (baseChannels.length()==0) {
             return new MessageCreationResponseObject("Отсутствуют доступные каналы для рассылки");
@@ -127,11 +116,6 @@ public class MessageGenerator {
         }
 
         long baseScenarioId = scenario.getId();
-        boolean toSms = baseChannels.contains("S");
-        boolean toViber = baseChannels.contains("V");
-        boolean toVoice = baseChannels.contains("O");
-        boolean toParseco = baseChannels.contains("P");
-        boolean toFacebook = baseChannels.contains("F");
 
         //Список телефонов для выборки из PhoneGrant
         List<String> listPhones = new ArrayList<>();
@@ -172,8 +156,6 @@ public class MessageGenerator {
             results.close();
         }
 
-        // !!!!!!! Кэшируем данные по imsi с изменениями. Если они есть, то отбраковываем сообщения.
-
          /* Обрабатываем очищенные данные - сохраняем сообщения в БД */
         MessageDAO msgDAO = new MessageDAO(session);
         List<Message> dbMessages = new ArrayList<>();
@@ -184,53 +166,44 @@ public class MessageGenerator {
         try {
             session.getTransaction().begin();
 
-
-            boolean msgSms;
-            boolean msgViber;
-            boolean msgVoice;
-            boolean msgParseco;
-            boolean msgFacebook;
-
             String msgChannels;
             long msgScenarioId;
-
-
 
             for (Iterator<MessageCreationRequestObject.Message> iterMessage = data.getMessages().listIterator(); iterMessage.hasNext(); ) {
                 MessageCreationRequestObject.Message message = iterMessage.next();
 
-                msgScenarioId = baseScenarioId;
-                msgChannels = baseChannels;
+                /* Если есть персоналные каналы для телефона, то используем их,
+                 * но с учетом настроек типа сообщения */
+                msgChannels = (message.getChannels()==null? baseChannels: channelsAnd(message.getChannels(), msgType));
 
+                /* Обрабатываем гранты для телефонов */
                 if (phgCache.containsKey(message.getPhoneNumber())){
                     PhoneGrant pg = phgCache.get(message.getPhoneNumber());
 
                     /* проверка включенных каналов на телефоне */
-                    msgSms = pg.isAcceptSms() && toSms;
-                    msgViber = pg.isAcceptViber() && toViber;
-                    msgVoice = pg.isAcceptVoice() && toVoice;
-                    msgParseco = pg.isAcceptParseco() && toParseco;
-                    msgFacebook = pg.isAcceptFacebook() && toFacebook;
+                    msgChannels = channelsAnd(msgChannels, pg);
 
-                    if (!(msgSms||msgViber||msgVoice||msgParseco||msgFacebook)){
-                        iterMessage.remove();
-                        failedMessages.add(
-                                new MessageCreationResponseObject.FailedMessage(
-                                        message.getMessageId(),
-                                        "У телефона требуемые каналы заблокированы"
-                                )
-                        );
-                        iterMessage.remove();
-                        continue;
-                    }
+                }
 
-                    //Находим подходящий сценарий
-                    if (!msgSms) msgChannels=msgChannels.replace("S","");
-                    if (!msgViber) msgChannels=msgChannels.replace("V","");
-                    if (!msgVoice) msgChannels=msgChannels.replace("O","");
-                    if (!msgParseco) msgChannels=msgChannels.replace("P","");
-                    if (!msgFacebook) msgChannels=msgChannels.replace("F","");
+                /* Если каналов нет, то ошибка */
+                if (msgChannels.length()==0){
+                    iterMessage.remove();
+                    failedMessages.add(
+                            new MessageCreationResponseObject.FailedMessage(
+                                    message.getMessageId(),
+                                    "Требуемые каналы недоступны"
+                            )
+                    );
+                    iterMessage.remove();
+                    continue;
+                }
 
+                /* Если сценарии совпадают с базовым, то базовый идентификатор сценария,
+                *  если не совпадает - ищем в кэше или запрашиваем из БД */
+
+                if (msgChannels.equalsIgnoreCase(baseChannels)){
+                    msgScenarioId = baseScenarioId;
+                } else {
                     if (scCache.containsKey(msgChannels)){
                         msgScenarioId = scCache.get(msgChannels);
                     } else {
@@ -251,13 +224,6 @@ public class MessageGenerator {
                             scCache.put(msgChannels, msgScenarioId);
                         }
                     }
-
-                } else {
-                    msgSms = toSms;
-                    msgViber = toViber;
-                    msgVoice = toVoice;
-                    msgParseco = toParseco;
-                    msgFacebook = toFacebook;
                 }
 
                 Message msg = new Message();
@@ -267,11 +233,11 @@ public class MessageGenerator {
 
                 msg.setPhoneNumber(message.getPhoneNumber());
 
-                if (msgSms) msg.setSmsText(message.getSmsText());
-                if (msgViber) msg.setViberText(message.getViberText());
-                if (msgVoice) msg.setVoiceText(message.getVoiceText());
-                if (msgParseco) msg.setParsecoText(message.getParsecoText());
-                if (msgFacebook) msg.setFacebookText(message.getFacebookText());
+                if (msgChannels.contains("S")) msg.setSmsText(message.getSmsText());
+                if (msgChannels.contains("V")) msg.setViberText(message.getViberText());
+                if (msgChannels.contains("O")) msg.setVoiceText(message.getVoiceText());
+                if (msgChannels.contains("P")) msg.setParsecoText(message.getParsecoText());
+                if (msgChannels.contains("F")) msg.setFacebookText(message.getFacebookText());
 
                 msgDAO.add(msg);
 
@@ -350,5 +316,14 @@ public class MessageGenerator {
             }
         }
         return new MessageCreationResponseObject(successMessages, failedMessages, bulkId, bulkDescription);
+    }
+
+    private static String channelsAnd(String channels, AcceptChannels acceptChannels){
+        if (!acceptChannels.isAcceptSms()) channels = channels.replace("S","");
+        if (!acceptChannels.isAcceptViber()) channels = channels.replace("V","");
+        if (!acceptChannels.isAcceptVoice()) channels = channels.replace("O","");
+        if (!acceptChannels.isAcceptParseco()) channels = channels.replace("P","");
+        if (!acceptChannels.isAcceptFacebook()) channels = channels.replace("F","");
+        return channels;
     }
 }

@@ -7,7 +7,7 @@ import com.bankir.mgs.hibernate.model.Message;
 import com.bankir.mgs.hibernate.model.Report;
 import com.bankir.mgs.infobip.InfobipMessageGateway;
 import com.bankir.mgs.infobip.model.DeliveryReport;
-import com.bankir.mgs.infobip.model.Result;
+import com.bankir.mgs.infobip.model.InfobipObjects;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
 import org.slf4j.Logger;
@@ -58,7 +58,7 @@ public class DeliveryReportProcessor extends AbstractProcessor {
             */
 
 
-            for (Result message : deliveryReport.getResults()) {
+            for (InfobipObjects.Result message : deliveryReport.getResults()) {
                 sessionForTransactions.getTransaction().begin();
                 try {
 
@@ -110,7 +110,8 @@ public class DeliveryReportProcessor extends AbstractProcessor {
             if (   requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.URL_ERROR)
                     ||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.PROXY_ERROR)
                     ||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.AUTH_ERROR)
-                    ){
+                    /*||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.CONNECTION_ERROR)*/
+               ){
 
                 sessionForTransactions.close();
                 ims.stop();

@@ -1,17 +1,21 @@
 package com.bankir.mgs;
 
 
-import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.http.HttpVersion;
+import org.eclipse.jetty.server.*;
 import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.DispatcherType;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.util.EnumSet;
 
 
@@ -26,6 +30,48 @@ public class MgsApp
         try {
             logger.debug("Get config settings");
             Settings settings = Config.getSettings();
+
+            Server jettyServer = new Server();
+
+            HttpConfiguration http_config = new HttpConfiguration();
+            http_config.setOutputBufferSize(32768);
+
+            ServerConnector http = new ServerConnector(jettyServer, new HttpConnectionFactory(http_config));
+            http.setPort(settings.getPort());
+            http.setIdleTimeout(30000);
+
+            jettyServer.addConnector(http);
+
+            if (settings.getSslConfig().isUseSsl()) {
+                String keystorePath = settings.getSslConfig().getKeystorePath();
+                File keystoreFile = new File(keystorePath);
+                if (!keystoreFile.exists()) {
+                    throw new FileNotFoundException(keystoreFile.getAbsolutePath());
+                }
+
+                SslContextFactory sslContextFactory = new SslContextFactory();
+                sslContextFactory.setKeyStorePath(keystoreFile.getAbsolutePath());
+                sslContextFactory.setKeyStorePassword(settings.getSslConfig().getKeystorePassword());
+                sslContextFactory.setKeyManagerPassword(settings.getSslConfig().getKeyPassword());
+
+                HttpConfiguration https_config = new HttpConfiguration();
+                https_config.setSecureScheme("https");
+                https_config.setSecurePort(settings.getSslConfig().getPort());
+                https_config.setOutputBufferSize(32768);
+
+                SecureRequestCustomizer src = new SecureRequestCustomizer();
+                src.setStsMaxAge(2000);
+                src.setStsIncludeSubDomains(true);
+                https_config.addCustomizer(src);
+
+                ServerConnector https = new ServerConnector(jettyServer,
+                        new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.asString()),
+                        new HttpConnectionFactory(https_config));
+                https.setPort(8443);
+                https.setIdleTimeout(500000);
+
+                jettyServer.addConnector(https);
+            }
 
             ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
             context.setContextPath("/");
@@ -106,7 +152,19 @@ public class MgsApp
         /* Создаём сервер Jetty на порту 8080 */
             logger.debug("Start jetty web server");
 
-            Server jettyServer = new Server(settings.getPort());
+            //Server jettyServer = new Server(settings.getPort());
+
+
+
+
+
+
+
+
+
+
+
+
             jettyServer.setHandler(context);
         /* Стартуем сервер */
             jettyServer.start();

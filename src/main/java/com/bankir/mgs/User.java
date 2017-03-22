@@ -3,6 +3,7 @@ package com.bankir.mgs;
 import java.security.Principal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class User implements Principal {
 
@@ -17,11 +18,13 @@ public class User implements Principal {
     private List<String> roles;
     private Long id;
     private String login;
+    private String userToken;
 
     public User(Long id, String login, String userName, List<String> roles){
         this.id = id;
         this.userName=userName;
         this.login = login;
+        this.userToken = UUID.randomUUID().toString();
         if (roles == null) {
             this.roles = new ArrayList<>();
             this.roles.add(ROLE_ANONYMOUS);
@@ -45,5 +48,9 @@ public class User implements Principal {
 
     public String getLogin() {
         return login;
+    }
+
+    public String getUserToken() {
+        return userToken;
     }
 }

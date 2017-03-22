@@ -59,6 +59,7 @@ public class MessageCreationRequestObject {
         private String facebookText;
         private String phoneNumber;
         private String messageId;
+        private String channels;
 
 
         public Message(String messageId, String phoneNumber,  String text) {
@@ -107,5 +108,9 @@ public class MessageCreationRequestObject {
         public String getFacebookText() {
             return facebookText;
         }
+
+    public String getChannels() {
+        return channels;
     }
+}
 }

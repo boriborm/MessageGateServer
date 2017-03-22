@@ -3,24 +3,17 @@ package com.bankir.mgs.infobip.model;
 
 public class Message {
 
-    To to;
+    InfobipObjects.To to;
     String messageId;
-    Status status;
+    InfobipObjects.Status status;
     int messageCount;
-
-    public To getTo() {
-        return to;
-    }
 
     public String getMessageId() {
         return messageId;
     }
 
-    public Status getStatus() {
+    public InfobipObjects.Status getStatus() {
         return status;
     }
 
-    public int getMessageCount() {
-        return messageCount;
-    }
 }

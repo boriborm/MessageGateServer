@@ -1,5 +1,6 @@
 package com.bankir.mgs.hibernate.model;
 
+import com.bankir.mgs.hibernate.AcceptChannels;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -10,7 +11,7 @@ import java.io.Serializable;
 
 @Entity
 @Table(name="MESSAGETYPES")
-public class MessageType  implements Serializable {
+public class MessageType  implements Serializable, AcceptChannels {
 
     @Id
     @Column

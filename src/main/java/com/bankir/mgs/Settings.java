@@ -16,6 +16,7 @@ public class Settings {
     private String defaultMessageType;
     private Infobip infobip;
     private Proxy proxy;
+    private SSLConfig sslConfig;
     private FilesProcessor filesProcessor;
     private List<Property> hibernateProperties;
     private List<Property> defaultServletProperties;
@@ -173,5 +174,9 @@ public class Settings {
 
     public String getDefaultMessageType() {
         return defaultMessageType;
+    }
+
+    public SSLConfig getSslConfig() {
+        return sslConfig;
     }
 }

@@ -19,6 +19,7 @@ Ext.define('global.classes.BaseApplication', {
 					
 					me.globalViewPort.getEl().unmask();
 					me.user = jResponse.data;
+					Ext.Ajax.setDefaultHeaders({'User-Token':me.user.userToken});
 					me.initApp();
 				} else {
 					window.location="/authorize.html?back="+encodeURIComponent(window.location);

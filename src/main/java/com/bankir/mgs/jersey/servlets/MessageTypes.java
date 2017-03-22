@@ -34,7 +34,6 @@ public class MessageTypes extends BaseServlet{
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-
         JsonObject json;
 
         // Открываем сессию с транзакцией

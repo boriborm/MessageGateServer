@@ -1,5 +1,6 @@
 package com.bankir.mgs.hibernate.model;
 
+import com.bankir.mgs.hibernate.AcceptChannels;
 import org.hibernate.annotations.Type;
 
 import javax.persistence.Column;
@@ -10,7 +11,7 @@ import java.io.Serializable;
 
 @Entity
 @Table(name="PHONEGRANTS")
-public class PhoneGrant implements Serializable {
+public class PhoneGrant implements Serializable, AcceptChannels {
 
     @Id
     @Column
@@ -46,7 +47,7 @@ public class PhoneGrant implements Serializable {
         this.acceptParseco = false;
         this.acceptVoice = false;
         this.acceptFacebook = false;
-    };
+    }
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;

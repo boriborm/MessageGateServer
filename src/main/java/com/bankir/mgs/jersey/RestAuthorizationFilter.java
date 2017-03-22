@@ -4,8 +4,6 @@ import com.bankir.mgs.Authorization;
 import com.bankir.mgs.BasicAuth;
 import com.bankir.mgs.Config;
 import com.bankir.mgs.User;
-import com.bankir.mgs.hibernate.dao.UserDAO;
-import org.hibernate.StatelessSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,16 +42,16 @@ public class RestAuthorizationFilter implements ContainerRequestFilter {
         String authorizationHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
 
 
-        /* Если заголовок присутствует, авторизуемся по нему */
+        /* Если заголовок присутствует, это сервис - авторизуемся по нему */
         if (authorizationHeader!=null) {
 
             /* Если текущий заголовок не совпадает с заголовком, сохраненным в сессии, значит изменился пользователь,
             * переавторизовываем */
 
-            if (!authorizationHeader.equals(httpSession.getAttribute(HttpHeaders.AUTHORIZATION))) {
+            //if (!authorizationHeader.equals(httpSession.getAttribute(HttpHeaders.AUTHORIZATION))) {
 
                 /* Если авторизация не удастся, то скидываем пользователя на анонима */
-                user = Config.ANONYMOUS_USER;
+                //user = Config.ANONYMOUS_USER;
 
                 /* Распаковываем из заголовка логин и пароль*/
                 String[] lap = BasicAuth.decode(authorizationHeader);
@@ -62,11 +60,14 @@ public class RestAuthorizationFilter implements ContainerRequestFilter {
 
                     try {
                         user = Authorization.Authorize(lap[0], lap[1]);
-
                         /* Для авторизованного пользователя сохраняем пользователя и заголовок Authorization в данные сессии */
                         if (!user.isAnonymous()) {
-                            httpSession.setAttribute("user", user);
-                            httpSession.setAttribute(HttpHeaders.AUTHORIZATION, authorizationHeader);
+                            // Если у пользователя отсутствует роль RESTSERVICE, значит он не может работать с HEADER Authorization
+                            if (user.userWithRole(User.ROLE_RESTSERVICE))
+                                httpSession.setAttribute("user", user);
+                            else
+                                user = Config.ANONYMOUS_USER;
+                            //httpSession.setAttribute(HttpHeaders.AUTHORIZATION, authorizationHeader);
                         }
 
                     } catch (PasswordStorage.InvalidHashException e) {
@@ -76,16 +77,16 @@ public class RestAuthorizationFilter implements ContainerRequestFilter {
                     }
 
                 }
-            } else {
+            /*} else {
 
-                /* Проверяем, вдруг пользователя уже блокировали или удалили */
+                // Проверяем, вдруг пользователя уже блокировали или удалили
                 StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
                 UserDAO userDAO = new UserDAO(session);
                 com.bankir.mgs.hibernate.model.User usr = userDAO.getByLogin(user.getLogin());
                 if (usr==null||usr.isLocked()) user = Config.ANONYMOUS_USER;
                 session.close();
 
-            }
+            }*/
         }
         String scheme = requestContext.getUriInfo().getRequestUri().getScheme();
         requestContext.setSecurityContext(new AppSecurityContext(user, scheme));

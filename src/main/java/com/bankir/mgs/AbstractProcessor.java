@@ -19,7 +19,6 @@ public class AbstractProcessor implements Runnable {
             this.thread = new Thread(this);
             this.thread.start();
             this.setStatus("Processor "+this.getClass().getName()+" started");
-
         }
     }
 
@@ -29,6 +28,12 @@ public class AbstractProcessor implements Runnable {
         if (this.thread.isAlive()) processorEnabled=false;
         Logger logger = LoggerFactory.getLogger(getClass().getName());
         logger.info("Stopping processor by user {}", user);
+    }
+
+    void stopProcessorWithError(Exception e){
+        processorEnabled = false;
+        this.setErrorStatus("Error: "+e.getMessage(), e);
+        this.thread = null;
     }
 
     public synchronized void setSleepTime(long sleepTime){
@@ -57,9 +62,7 @@ public class AbstractProcessor implements Runnable {
                     try {
                         process();
                     } catch (Exception e) {
-                        processorEnabled = false;
-                        this.setErrorStatus("Error: "+e.getMessage(), e);
-                        this.thread = null;
+                        stopProcessorWithError(e);
                         return;
                     }
                 }

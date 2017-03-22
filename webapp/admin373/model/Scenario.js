@@ -25,7 +25,7 @@ Ext.define('admins.model.Scenario', {
 		{name:'key', type:'string'},
 		{name:'active', type:'bool'},
 		{name:'isDefault', type:'bool', persis:true},
-		{name:'flow', reference :'ScenarioFlow'}
+		{name:'flow', reference :'ScenarioFlow'}		
     ]
 });
 

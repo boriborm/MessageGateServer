@@ -202,6 +202,13 @@ public class Scenarios extends BaseServlet {
             throwException("Необходимо задать имя сценария");
         }
 
+        /* Если имя сценария не задали, то выводим обшибку */
+        if (scenario.getName()==null){
+            throwException("Необходимо задать имя сценария");
+        }
+
+        JsonObject json = null;
+
         // Обновляем данные сценария в Инфобипе
         InfobipMessageGateway ims = null;
         InfobipObjects.Scenario infobipScenario = null;
