@@ -30,7 +30,7 @@ public class AbstractProcessor implements Runnable {
         logger.info("Stopping processor by user {}", user);
     }
 
-    void stopProcessorWithError(Exception e){
+    void  stopProcessorWithError(Exception e){
         processorEnabled = false;
         this.setErrorStatus("Error: "+e.getMessage(), e);
         this.thread = null;
@@ -85,7 +85,7 @@ public class AbstractProcessor implements Runnable {
         logger.info(this.getStatus());
     };
 
-    protected void setErrorStatus(String status, Exception e) {
+    void setErrorStatus(String status, Exception e) {
         this.status = status;
         Logger logger = LoggerFactory.getLogger(getClass().getName());
         logger.error(this.getStatus(), e);

@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -51,7 +52,7 @@ public class InfobipMessageGateway {
         }
     }
 
-    public InfobipMessageGateway() throws Exception {
+    public InfobipMessageGateway() throws RequestErrorException {
         Settings settings = Config.getSettings();
 
         authorization = Config.INFOBIP_AUTHORIZATION;
@@ -65,32 +66,40 @@ public class InfobipMessageGateway {
 
             Settings.Proxy proxy = settings.getProxy();
 
-            auth.addAuthentication(
-                    new BasicAuthentication(
-                            new URI(proxy.getUrl()),
-                            proxy.getRealm(),
-                            proxy.getLogin(),
-                            proxy.getPassword()
-                    )
-            );
+            try {
+                auth.addAuthentication(
+                        new BasicAuthentication(
+                                new URI(proxy.getUrl()),
+                                proxy.getRealm(),
+                                proxy.getLogin(),
+                                proxy.getPassword()
+                        )
+                );
+            } catch (URISyntaxException e) {
+                throw new RequestErrorException(e.getMessage(), ConnectionErrors.URL_ERROR);
+            }
             ProxyConfiguration proxyConfig = httpClient.getProxyConfiguration();
             proxyConfig.getProxies().add(Config.getProxy());
         }
 
-        httpClient.start();
+        try {
+            httpClient.start();
+        } catch (Exception e) {
+            throw new RequestErrorException(e.getMessage(), ConnectionErrors.CONNECTION_ERROR);
+        }
 
         GsonBuilder gsonBuilder = new GsonBuilder();
         gson = gsonBuilder.setPrettyPrinting()
                 .setDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ")
                 .create();
 
-        logger.debug("Start Infobip gateway connection");
+        logger.debug("Start Infobip gateway connection. Thread id: {}", Thread.currentThread().getId());
     }
 
     public void stop(){
         try {
             httpClient.stop();
-            logger.debug("Stop Infobip gateway connection");
+            logger.debug("Stop Infobip gateway connection. Thread id: {}", Thread.currentThread().getId());
         } catch (Exception e) {
             logger.error("Error: "+e.getMessage(), e);
         }

@@ -13,11 +13,8 @@ import org.hibernate.query.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Observer;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.*;
 
 
 public class QueueProcessor  extends AbstractProcessor {
@@ -25,36 +22,30 @@ public class QueueProcessor  extends AbstractProcessor {
     private static QueueProcessor qp;
     private static MessageType defaultMessageType = new MessageType();
 
-    private boolean breakeWithException = false;
-    private Exception breakeException;
+    private volatile boolean breakeWithException = false;
+    private volatile boolean breake = false;
+    private volatile Exception breakeException;
 
     public static synchronized QueueProcessor getInstance(){
         if (qp ==null) qp = new QueueProcessor();
         return qp;
     }
 
+    private synchronized void breakeWithException(Exception breakeException){
+        this.breake = this.breakeWithException = true;
+        this.breakeException = breakeException;
+    }
+
+    private synchronized void breake(){
+        this.breake = true;
+    }
     /* Обработка очереди сообщений */
     protected void process() throws Exception {
         int MAX_MESSAGE_QUEUE = 1000;
-
         boolean signalDeliveryProcessor = false;
-
-        //InfobipMessageGateway ims = null;
-
-        StatelessSession sessionForQueries = Config.getHibernateSessionFactory().openStatelessSession();
-        //StatelessSession sessionForTransactions = Config.getHibernateSessionFactory().openStatelessSession();
-
-        /*
-        MessageDAO msgDAO = new MessageDAO(sessionForQueries);
-        QueuedMessageDAO qmDAO = new QueuedMessageDAO(sessionForTransactions);
-        ReportDAO reportDAO = new ReportDAO(sessionForTransactions);
-        */
-
-        List<QueueMessagesHandler> msgHandlers = new ArrayList<>();
-
-
         BlockingQueue<QueueMessagesHandler.MessageData> msgQueue = new ArrayBlockingQueue<>(MAX_MESSAGE_QUEUE);
 
+        StatelessSession sessionForQueries = Config.getHibernateSessionFactory().openStatelessSession();
         /* Обрабатываем одиночные сообщения */
         Query query = sessionForQueries.createQuery(
                 "FROM Message m " +
@@ -66,42 +57,30 @@ public class QueueProcessor  extends AbstractProcessor {
         query.setReadOnly(true);
         ScrollableResults results = query.scroll(ScrollMode.FORWARD_ONLY);
 
-        Observer handlerObserver = (o, arg) -> {
-            //Если ошибка коннекта с инфобипом
-            if (arg instanceof InfobipMessageGateway.RequestErrorException){
-                InfobipMessageGateway.RequestErrorException requestErrorException = (InfobipMessageGateway.RequestErrorException) arg;
-                if (   requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.URL_ERROR)
-                        ||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.PROXY_ERROR)
-                        /*||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.CONNECTION_ERROR)*/
-                   ){
-
-                    msgQueue.clear();
-                    //прерываем цикл по Result
-                    breakeWithException = true;
-                    breakeException = requestErrorException;
-                }
-
-                logger.error("Send Message Error: "+ requestErrorException.getMessage(), requestErrorException);
+        Observer errorObserver = (o, arg) -> {
+            InfobipMessageGateway.RequestErrorException requestErrorException = (InfobipMessageGateway.RequestErrorException) arg;
+            //Очищаем очередь сообщений
+            msgQueue.clear();
+            // Для ошибок URL_ERROR и PROXY_ERROR останавливаем процесс, т.к. у нас неправильные настройки
+            if (   requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.URL_ERROR)
+                    ||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.PROXY_ERROR)
+                    /*||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.CONNECTION_ERROR)*/
+               ){
+                //прерываем цикл по Result
+                breakeWithException(requestErrorException);
+            } else{
+                breake();
             }
         };
 
-        int counter = 0;
+        int threadsCount = 5;
+        ExecutorService es = Executors.newFixedThreadPool(threadsCount);
+        for (int i =0;i<threadsCount;i++){
+            es.execute(new QueueMessagesHandler(msgQueue, i+1, errorObserver));
+        }
 
-        //try{
-
-        while (!breakeWithException && results.next()) {
-            counter=counter+1;
-            if (  counter==1
-                ||counter==1000
-                ||counter==2000
-                ||counter==3000
-                ||counter==4000
-            ){
-                QueueMessagesHandler msgHandler = new QueueMessagesHandler(msgQueue, msgHandlers.size()+1);
-                msgHandler.addObserver(handlerObserver);
-                msgHandlers.add(msgHandler);
-            }
-
+        while (!breake && results.next()) {
+            //counter=counter+1;
             QueueMessagesHandler.MessageData msgData = new QueueMessagesHandler.MessageData(
                     (Message) results.get(0),
                     (Scenario) results.get(3),
@@ -109,16 +88,17 @@ public class QueueProcessor  extends AbstractProcessor {
                     (QueuedMessage) results.get(2)
             );
 
-            msgQueue.add(msgData);
-            signalDeliveryProcessor = true;
-
+            msgQueue.put(msgData);
         }
-
-        msgQueue.add(QueueMessagesHandler.DONE);
-
+        //Сигнал на завершение
+        msgQueue.put(QueueMessagesHandler.DONE);
 
         results.close();
         sessionForQueries.close();
+
+        //Ждём завершения всех потоков
+        es.shutdown();
+        es.awaitTermination(0, TimeUnit.SECONDS);
 
         // Уменьшим период запроса отчета до минимума
         // Сигналить нет смысла, т.к. сообщения ещё могут быть не отправлены, нужно некотрое время

@@ -18,13 +18,13 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Observable;
+import java.util.Observer;
 import java.util.concurrent.BlockingQueue;
 
 
 public class QueueMessagesHandler extends Observable implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(QueueProcessor.class);
     static final MessageData DONE= new MessageData();
-    private Thread thread;
     private InfobipMessageGateway ims;
     private StatelessSession session;
     private MessageDAO msgDAO;
@@ -52,67 +52,58 @@ public class QueueMessagesHandler extends Observable implements Runnable {
         Message getMessage() {
             return msg;
         }
-
         Scenario getScenario() {
             return scenario;
         }
-
         MessageType getMessageType() {
             return msgType;
         }
-
         QueuedMessage getQueuedMessage() {
             return qmsg;
         }
     }
 
-    QueueMessagesHandler(BlockingQueue<MessageData> queue, int id) throws Exception {
+    QueueMessagesHandler(BlockingQueue<MessageData> queue, int id, Observer errorObserver) throws Exception {
+        this.addObserver(errorObserver);;
         this.handlerId = id;
         this.queue = queue;
-        this.thread = new Thread(this);
-        logger.debug("START queueMessagesHandler id "+handlerId);
-        this.thread.start();
-
+        logger.debug("START queueMessagesHandler id: {}, thread-id: {}", handlerId, Thread.currentThread().getId());
     }
 
     @Override
     public void run() {
 
+        session = Config.getHibernateSessionFactory().openStatelessSession();
+        msgDAO = new MessageDAO(session);
+        qmDAO = new QueuedMessageDAO(session);
+        reportDAO = new ReportDAO(session);
         try {
-
             ims = new InfobipMessageGateway();
-            session = Config.getHibernateSessionFactory().openStatelessSession();
-            msgDAO = new MessageDAO(session);
-            qmDAO = new QueuedMessageDAO(session);
-            reportDAO = new ReportDAO(session);
-
-            while(true){
+            while (true) {
                 MessageData msgData = queue.take();
-
-                if (msgData==DONE) {
+                if (msgData == DONE) {
                     queue.add(DONE); //Чтобы другие потоки не зависли в ожидании данных в очереди
                     break;
                 }
-                try {
-                    handleMessage(msgData);
-                } catch (InfobipMessageGateway.RequestErrorException e) {
-                    this.setChanged();
-                    this.notifyObservers(e);
-                }
+                handleMessage(msgData);
             }
-
-            session.close();
-            session = null;
-            msgDAO = null;
-            qmDAO = null;
-            reportDAO = null;
-        } catch (Exception e) {
-            logger.debug("EXCEPTION queueMessagesHandler id "+handlerId);
+        } catch (InterruptedException ie) {
+            logger.debug("INTERRUPTED queueMessagesHandler id: {}, thread-id: {}", handlerId, Thread.currentThread().getId());
+        } catch (InfobipMessageGateway.RequestErrorException e) {
             this.setChanged();
             this.notifyObservers(e);
+            logger.debug("EXCEPTION queueMessagesHandler id: {}, thread-id: {}, exception: {}", handlerId, Thread.currentThread().getId(), e.getMessage());
         }
-        logger.debug("DONE queueMessagesHandler id "+handlerId);
-        this.thread = null;
+
+        ims.stop();
+        session.close();
+        ims = null;
+        session = null;
+        msgDAO = null;
+        qmDAO = null;
+        reportDAO = null;
+
+        logger.debug("END queueMessagesHandler id: {}, thread-id: {}", handlerId, Thread.currentThread().getId());
     }
 
     private void handleMessage(MessageData msgData) throws InfobipMessageGateway.RequestErrorException {
