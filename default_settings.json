@@ -4,7 +4,9 @@
     "keystorePath":"/home/bankir/IdeaProjects/MessageGateServer/keystore/mgskeystore",
     "keystorePassword":"password",
     "keyPassword":"password",
-    "port":8443
+    "port":8443,
+    "excludeProtocols":["SSL", "SSLv2", "SSLv2Hello", "SSLv3"],
+    "excludeCipherSuites":["^.*_(MD5|SHA|SHA1)$"]
   },
   "useProxy":true,
   "useFileProcessor":false,

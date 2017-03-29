@@ -1,5 +1,8 @@
 package com.bankir.mgs;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -12,7 +15,7 @@ import java.net.URLEncoder;
 
 public class ResourcesAccessFilter implements Filter {
 
-
+    Logger logger = LoggerFactory.getLogger(ResourcesAccessFilter.class);
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException {
@@ -57,6 +60,7 @@ public class ResourcesAccessFilter implements Filter {
             /* Если путь только для авторизованных пользователей, а пользователь анонимный
             * то редиректим на страницу с информацией о недоступности ресурса */
             if (uri.getPath().startsWith(settings.getOpersPath()) && user.isAnonymous()){
+                logger.debug("session:"+ httpSession.getId()+ " uri path: "+uri.getPath()+" "+settings.getOpersPath() +" user is anonymous: "+user.isAnonymous());
                 HttpServletResponse httpResponse = (HttpServletResponse) response;
                 httpResponse.sendRedirect("/authorization.html?back=" + URLEncoder.encode(settings.getOpersPath(), "UTF-8"));
                 return;

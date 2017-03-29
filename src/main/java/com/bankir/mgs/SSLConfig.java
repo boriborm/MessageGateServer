@@ -10,6 +10,9 @@ public class SSLConfig {
     private boolean useSsl;
     private int port;
 
+    private String[] excludeProtocols;
+    private String[] excludeCipherSuites;
+
     public String getKeystorePath() {
         return keystorePath;
     }
@@ -28,5 +31,13 @@ public class SSLConfig {
 
     public boolean isUseSsl() {
         return useSsl;
+    }
+
+    public String[] getExcludeProtocols() {
+        return excludeProtocols;
+    }
+
+    public String[] getExcludeCipherSuites() {
+        return excludeCipherSuites;
     }
 }

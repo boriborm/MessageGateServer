@@ -50,13 +50,17 @@ public class MgsApp
                 }
 
                 SslContextFactory sslContextFactory = new SslContextFactory();
+
+                if (settings.getSslConfig().getExcludeCipherSuites()!=null) sslContextFactory.setExcludeCipherSuites(settings.getSslConfig().getExcludeCipherSuites());
+                if (settings.getSslConfig().getExcludeProtocols()!=null) sslContextFactory.setExcludeProtocols(settings.getSslConfig().getExcludeProtocols());
+
                 sslContextFactory.setKeyStorePath(keystoreFile.getAbsolutePath());
                 sslContextFactory.setKeyStorePassword(settings.getSslConfig().getKeystorePassword());
                 sslContextFactory.setKeyManagerPassword(settings.getSslConfig().getKeyPassword());
 
+
                 HttpConfiguration https_config = new HttpConfiguration();
                 https_config.setSecureScheme("https");
-                https_config.setSecurePort(settings.getSslConfig().getPort());
                 https_config.setOutputBufferSize(32768);
 
                 SecureRequestCustomizer src = new SecureRequestCustomizer();
@@ -67,9 +71,7 @@ public class MgsApp
                 ServerConnector https = new ServerConnector(jettyServer,
                         new SslConnectionFactory(sslContextFactory, HttpVersion.HTTP_1_1.asString()),
                         new HttpConnectionFactory(https_config));
-                https.setPort(8443);
-                https.setIdleTimeout(500000);
-
+                https.setPort(settings.getSslConfig().getPort());
                 jettyServer.addConnector(https);
             }
 
@@ -102,8 +104,6 @@ public class MgsApp
             resourceConfig.packages("com.bankir.mgs.jersey, com.bankir.mgs.jersey.servlets");
         /* Поддержка загрузки файлов на сервер */
             //resourceConfig.register(MultiPartFeature.class);
-        /* Поддержка SecurityContext в аннотациях сервлетов - PermitAll, AllowRoles и тп */
-            //resourceConfig.register(RolesAllowedDynamicFeature.class);
 
             ServletContainer restServletContainer = new ServletContainer(resourceConfig);
             ServletHolder restHolder = new ServletHolder(restServletContainer);
@@ -123,53 +123,11 @@ public class MgsApp
                 FileProcessor.getInstance().startProcessor("APP");
             }
 
-/*
-
-        String testSms = "{"+
-                "  \"destinations\":[ \n" +
-                "        { \n" +
-                "          \"to\":{\n" +
-                "              \"phoneNumber\": \"79203674776\"\n" +
-                "            }\n" +
-                "        }\n" +
-                "    ],\n" +
-                "  \"sms\": {\n" +
-                "      \"text\": \"Test\"\n" +
-                "  }\n" +
-                "}";
-        System.out.println(testSms);
-
-        GsonBuilder gsonBuilder = new GsonBuilder();
-        Gson gson = gsonBuilder.create();
-
-        OmniAdvancedMessage am = gson.fromJson(testSms, OmniAdvancedMessage.class);
-        am.setScenarioId(settings.getDefaultScenarioKey());
-        InfobipMessageGateway sender = new InfobipMessageGateway();
-        sender.sendAdvancedMessage(am);
-        sender.stop();
-*/
-
-        /* Создаём сервер Jetty на порту 8080 */
-            logger.debug("Start jetty web server");
-
-            //Server jettyServer = new Server(settings.getPort());
-
-
-
-
-
-
-
-
-
-
-
-
             jettyServer.setHandler(context);
         /* Стартуем сервер */
             jettyServer.start();
 
-            logger.info("Start complete");
+            logger.info("Start web server complete");
 
         /* присоединяем к демону */
             jettyServer.join();
