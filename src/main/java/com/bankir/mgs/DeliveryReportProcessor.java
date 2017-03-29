@@ -18,10 +18,12 @@ public class DeliveryReportProcessor extends AbstractProcessor {
     private static DeliveryReportProcessor rp;
     private static final Logger logger = LoggerFactory.getLogger(DeliveryReportProcessor.class);
 
-    static final long MIN_SLEEP_TIME = 10000;
-    private static final long MAX_SLEEP_TIME = 600000;
+    static final long MIN_SLEEP_TIME = Config.getSettings().getDeliveryReportProcessorConfig().getMinSleepTime();
+    private static final long MAX_SLEEP_TIME = Config.getSettings().getDeliveryReportProcessorConfig().getMaxSleepTime();
 
+    private static long SLEEP_STEP;
     public static synchronized DeliveryReportProcessor getInstance(){
+        SLEEP_STEP = (MAX_SLEEP_TIME - MIN_SLEEP_TIME)/5;
         if (rp ==null) rp = new DeliveryReportProcessor();
         return rp;
     }
@@ -50,7 +52,7 @@ public class DeliveryReportProcessor extends AbstractProcessor {
             } else { //Или постепенно растягиваем сон до 10 минут
                 long sleepTime = this.getSleepTime();
                 if (sleepTime < MAX_SLEEP_TIME)
-                    this.setSleepTime(sleepTime + 10000);
+                    this.setSleepTime(sleepTime + SLEEP_STEP);
             }
 
             /* Бежим по сообщениям и сохраняем их статусы в БД,

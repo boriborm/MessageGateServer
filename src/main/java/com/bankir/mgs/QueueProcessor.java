@@ -22,12 +22,18 @@ public class QueueProcessor  extends AbstractProcessor {
     private static QueueProcessor qp;
     private static MessageType defaultMessageType = new MessageType();
 
+    private static int MAXIMUM_MESSAGEHANDLER_THREADS = Config.getSettings().getQueueProcessorConfig().getMaxMessageHandlerThreads();
+
     private volatile boolean breakeWithException = false;
     private volatile boolean breake = false;
     private volatile Exception breakeException;
 
     public static synchronized QueueProcessor getInstance(){
+
+        logger.debug("create QueueProcessor. MAXIMUM_MESSAGEHANDLER_THREADS: {}, SLEEP_TIME (ms): {}",MAXIMUM_MESSAGEHANDLER_THREADS, Config.getSettings().getQueueProcessorConfig().getSleepTime());
+
         if (qp ==null) qp = new QueueProcessor();
+        qp.setSleepTime(Config.getSettings().getQueueProcessorConfig().getSleepTime());
         return qp;
     }
 
@@ -45,17 +51,19 @@ public class QueueProcessor  extends AbstractProcessor {
         boolean signalDeliveryProcessor = false;
         BlockingQueue<QueueMessagesHandler.MessageData> msgQueue = new ArrayBlockingQueue<>(MAX_MESSAGE_QUEUE);
 
-        StatelessSession sessionForQueries = Config.getHibernateSessionFactory().openStatelessSession();
-        /* Обрабатываем одиночные сообщения */
-        Query query = sessionForQueries.createQuery(
-                "FROM Message m " +
-                "JOIN MessageType mt ON m.typeId=mt.typeId " +
-                "JOIN QueuedMessage qm ON m.id=qm.messageId " +
-                "JOIN Scenario s ON m.scenarioId=s.id "
-        );
-        query.setFetchSize(1000);
-        query.setReadOnly(true);
-        ScrollableResults results = query.scroll(ScrollMode.FORWARD_ONLY);
+        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
+        Query countQuery = session.createQuery("SELECT count (qm.id) FROM QueuedMessage qm");
+        Long countMessages = (Long) countQuery.uniqueResult();
+
+        if (countMessages==0) return;
+
+        int threadsCount = (int) (countMessages/1000);
+        if (threadsCount==0) threadsCount=1;
+        if (threadsCount>MAXIMUM_MESSAGEHANDLER_THREADS) threadsCount = MAXIMUM_MESSAGEHANDLER_THREADS;
+        logger.debug("Start QUEUE processing. Count: {}, treads count: {}", countMessages, threadsCount);
+
+        CountDownLatch cdl = new CountDownLatch(threadsCount);
 
         Observer errorObserver = (o, arg) -> {
             InfobipMessageGateway.RequestErrorException requestErrorException = (InfobipMessageGateway.RequestErrorException) arg;
@@ -73,11 +81,23 @@ public class QueueProcessor  extends AbstractProcessor {
             }
         };
 
-        int threadsCount = 5;
+
         ExecutorService es = Executors.newFixedThreadPool(threadsCount);
         for (int i =0;i<threadsCount;i++){
-            es.execute(new QueueMessagesHandler(msgQueue, i+1, errorObserver));
+            es.execute(new QueueMessagesHandler(cdl, msgQueue, i+1, errorObserver));
         }
+
+        /* Обрабатываем одиночные сообщения */
+
+        Query query = session.createQuery(
+                "FROM Message m " +
+                        "JOIN MessageType mt ON m.typeId=mt.typeId " +
+                        "JOIN QueuedMessage qm ON m.id=qm.messageId " +
+                        "JOIN Scenario s ON m.scenarioId=s.id "
+        );
+        query.setFetchSize(1000);
+        query.setReadOnly(true);
+        ScrollableResults results = query.scroll(ScrollMode.FORWARD_ONLY);
 
         while (!breake && results.next()) {
             //counter=counter+1;
@@ -94,11 +114,11 @@ public class QueueProcessor  extends AbstractProcessor {
         msgQueue.put(QueueMessagesHandler.DONE);
 
         results.close();
-        sessionForQueries.close();
+        session.close();
 
         //Ждём завершения всех потоков
-        es.shutdown();
-        es.awaitTermination(0, TimeUnit.SECONDS);
+        cdl.await();
+        logger.debug("Stop QUEUE processing. queue size: {}", msgQueue.size());
 
         // Уменьшим период запроса отчета до минимума
         // Сигналить нет смысла, т.к. сообщения ещё могут быть не отправлены, нужно некотрое время

@@ -20,10 +20,11 @@ import java.util.List;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 
 
 public class QueueMessagesHandler extends Observable implements Runnable {
-    private static final Logger logger = LoggerFactory.getLogger(QueueProcessor.class);
+    private static final Logger logger = LoggerFactory.getLogger(QueueMessagesHandler.class);
     static final MessageData DONE= new MessageData();
     private InfobipMessageGateway ims;
     private StatelessSession session;
@@ -31,6 +32,7 @@ public class QueueMessagesHandler extends Observable implements Runnable {
     private QueuedMessageDAO qmDAO;
     private ReportDAO reportDAO;
     private int handlerId;
+    private CountDownLatch cdl;
 
     private BlockingQueue<MessageData> queue;
 
@@ -39,6 +41,7 @@ public class QueueMessagesHandler extends Observable implements Runnable {
         private Scenario scenario;
         private MessageType msgType;
         private QueuedMessage qmsg;
+
 
         MessageData() {}
 
@@ -63,9 +66,10 @@ public class QueueMessagesHandler extends Observable implements Runnable {
         }
     }
 
-    QueueMessagesHandler(BlockingQueue<MessageData> queue, int id, Observer errorObserver) throws Exception {
+    QueueMessagesHandler(CountDownLatch cdl, BlockingQueue<MessageData> queue, int id, Observer errorObserver) throws Exception {
         this.addObserver(errorObserver);;
         this.handlerId = id;
+        this.cdl = cdl;
         this.queue = queue;
         logger.debug("START queueMessagesHandler id: {}, thread-id: {}", handlerId, Thread.currentThread().getId());
     }
@@ -104,6 +108,8 @@ public class QueueMessagesHandler extends Observable implements Runnable {
         reportDAO = null;
 
         logger.debug("END queueMessagesHandler id: {}, thread-id: {}", handlerId, Thread.currentThread().getId());
+
+        cdl.countDown();
     }
 
     private void handleMessage(MessageData msgData) throws InfobipMessageGateway.RequestErrorException {
@@ -119,6 +125,9 @@ public class QueueMessagesHandler extends Observable implements Runnable {
             }
         }
 */
+
+        logger.debug("HANDLE message id: {}, queueMessagesHandler id: {}, thread-id: {}", msg.getExternalId(), handlerId, Thread.currentThread().getId());
+
         List<InfobipObjects.Destination> destinations = new ArrayList<>();
         destinations.add(new InfobipObjects.Destination(msg.getExternalId(), msg.getPhoneNumber()));
 

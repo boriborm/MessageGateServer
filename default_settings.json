@@ -30,6 +30,14 @@
     "login":"",
     "password":""
   },
+  "queueProcessor":{
+    "maxMessageHandlerThreads":5,
+    "sleepTimeSeconds": 10
+  },
+  "deliveryReportsProcessor":{
+    "minSleepTimeSeconds": 10,
+    "maxSleepTimeSeconds": 60
+  },
   "filesProcessor":{
     "charset":"Cp1251",
     "path":"/home/bankir/messages",

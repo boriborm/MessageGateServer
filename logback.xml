@@ -117,12 +117,13 @@
     </logger>
 
     <!-- Вывод SQL сформированный Hibernate на консоль -->
+    <!--
     <logger name="org.hibernate.SQL" level="DEBUG">
         <appender-ref ref="STDOUT" />
     </logger>
-
+-->
     <!-- По умолчанию вывод в файл other.log только ошибок-->
     <root level="INFO">
-        <appender-ref ref="STDOUT" />
+        <!--<appender-ref ref="STDOUT" />-->
     </root>
 </configuration>

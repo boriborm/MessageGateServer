@@ -18,6 +18,8 @@ public class Settings {
     private Proxy proxy;
     private SSLConfig sslConfig;
     private FilesProcessor filesProcessor;
+    private QueueProcessorConfig queueProcessor;
+    private DeliveryReportProcessorConfig deliveryReportProcessor;
     private List<Property> hibernateProperties;
     private List<Property> defaultServletProperties;
 
@@ -42,6 +44,31 @@ public class Settings {
 
         public String getValue() {
             return value;
+        }
+    }
+
+    public static class QueueProcessorConfig {
+        private int maxMessageHandlerThreads;
+        private int sleepTimeSeconds;
+
+        public int getMaxMessageHandlerThreads() {
+            return maxMessageHandlerThreads;
+        }
+
+        public long getSleepTime() {
+            return sleepTimeSeconds * 1000;
+        }
+    }
+
+    public static class DeliveryReportProcessorConfig {
+        private int maxSleepTimeSeconds;
+        private int minSleepTimeSeconds;
+
+        public long getMaxSleepTime() {
+            return maxSleepTimeSeconds * 1000;
+        }
+        public long getMinSleepTime() {
+            return minSleepTimeSeconds * 1000;
         }
     }
 
@@ -178,5 +205,13 @@ public class Settings {
 
     public SSLConfig getSslConfig() {
         return sslConfig;
+    }
+
+    public QueueProcessorConfig getQueueProcessorConfig() {
+        return queueProcessor;
+    }
+
+    public DeliveryReportProcessorConfig getDeliveryReportProcessorConfig() {
+        return deliveryReportProcessor;
     }
 }
