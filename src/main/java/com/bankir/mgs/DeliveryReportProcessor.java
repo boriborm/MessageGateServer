@@ -59,9 +59,10 @@ public class DeliveryReportProcessor extends AbstractProcessor {
             *  перепривязываем текущий статус
             */
 
+            sessionForTransactions.getTransaction().begin();
 
             for (InfobipObjects.Result message : deliveryReport.getResults()) {
-                sessionForTransactions.getTransaction().begin();
+
                 try {
 
 

@@ -33,6 +33,9 @@ public class MgsApp
 
             Server jettyServer = new Server();
 
+            jettyServer.setStopAtShutdown(true);
+            jettyServer.setStopTimeout(600000);
+
             HttpConfiguration http_config = new HttpConfiguration();
             http_config.setOutputBufferSize(32768);
 

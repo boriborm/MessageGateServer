@@ -1,7 +1,13 @@
 package com.bankir.mgs;
 
+import com.bankir.mgs.infobip.InfobipMessageGateway;
+import com.bankir.mgs.infobip.model.InfobipObjects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 public class AbstractProcessor implements Runnable {
     private volatile boolean processorEnabled = false;
@@ -34,6 +40,30 @@ public class AbstractProcessor implements Runnable {
         processorEnabled = false;
         this.setErrorStatus("Error: "+e.getMessage(), e);
         this.thread = null;
+        InfobipMessageGateway ims = null;
+
+        List<InfobipObjects.Destination> destinations = new ArrayList<>();
+
+        String msgId = Config.getSettings().getMessageIdPrefix()+"-ERR-"+ new Date().getTime();
+        int counter=0;
+        for (String phone: Config.getSettings().getStopProcessNotificationConfig().getPhones()){
+            counter++;
+            InfobipObjects.Destination destination = new InfobipObjects.Destination(msgId+"-"+counter, phone);
+            destinations.add(destination);
+        }
+
+        String msg = "Stop processor with error "+getClass().getName()+ e.getMessage().substring(0,100);
+
+        try {
+            ims = new InfobipMessageGateway();
+            ims.sendAdvancedMessage( new InfobipObjects.OmniAdvancedMessage( destinations, msg));
+        } catch (InfobipMessageGateway.RequestErrorException ignored) {
+        }
+
+        if (ims!=null){
+            try{ ims.stop();} catch (Exception ignored){}
+        }
+
     }
 
     public synchronized void setSleepTime(long sleepTime){

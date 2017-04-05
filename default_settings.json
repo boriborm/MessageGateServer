@@ -14,6 +14,9 @@
   "opersPath":"/opers/",
   "sessionTimeout": 6000,
   "messageIdPrefix":"LGN",
+  "stopProcessNotification":{
+    "phones":[]
+  },
   "defaultMessageType":"MESSAGE",
   "defaultScenarioKey":"",
   "imsiChangedMessage":"Сообщение не может быть доставлено, так как была произведена замена сим карты. Для актуализации новой сим карты и возобновления получения сообщений обратитесь в ....",

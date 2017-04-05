@@ -22,7 +22,7 @@ public class Settings {
     private DeliveryReportProcessorConfig deliveryReportProcessor;
     private List<Property> hibernateProperties;
     private List<Property> defaultServletProperties;
-
+    private Notification stopProcessNotification;
 
     public int getSessionTimeout() {
         return sessionTimeout;
@@ -159,6 +159,19 @@ public class Settings {
         }
     }
 
+    public static class Notification{
+        private String[] phones;
+        private String[] channels;
+
+        public String[] getPhones() {
+            return phones;
+        }
+
+        public String[] getChannels() {
+            return channels;
+        }
+    }
+
     int getPort() {
         return (this.port==0?8080:this.port);
     }
@@ -213,5 +226,9 @@ public class Settings {
 
     public DeliveryReportProcessorConfig getDeliveryReportProcessorConfig() {
         return deliveryReportProcessor;
+    }
+
+    public Notification getStopProcessNotificationConfig() {
+        return stopProcessNotification;
     }
 }
