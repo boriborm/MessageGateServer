@@ -7,8 +7,8 @@ import com.bankir.mgs.User;
 import com.bankir.mgs.hibernate.Utils;
 import com.bankir.mgs.hibernate.dao.MessageTypeDAO;
 import com.bankir.mgs.hibernate.model.MessageType;
-import com.bankir.mgs.jersey.model.JsonObject;
 import com.bankir.mgs.jersey.model.MessageTypeObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
@@ -29,19 +29,14 @@ public class MessageTypes extends BaseServlet{
     @POST
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
-    public JsonObject create(MessageTypeObject messageTypeObject) {
+    public MgsJsonObject create(MessageTypeObject messageTypeObject) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
+        MgsJsonObject json;
+        StatelessSession session = null;
 
-        // Открываем сессию с транзакцией
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        session.getTransaction().begin();
-
-        //Сохраняем данные сценария в БД
-        MessageTypeDAO dao = new MessageTypeDAO(session);
         try {
 
             MessageType mt = new MessageType(
@@ -60,20 +55,26 @@ public class MessageTypes extends BaseServlet{
                     messageTypeObject.isActive(),
                     messageTypeObject.isVerifyImsi()
             );
+
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            session.getTransaction().begin();
+
+            //Сохраняем данные сценария в БД
+            MessageTypeDAO dao = new MessageTypeDAO(session);
+
             dao.add(mt);
 
             session.getTransaction().commit();
-            json = new JsonObject(messageTypeObject);
+            json = new MgsJsonObject(messageTypeObject);
 
         }catch (JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            json = new JsonObject("Ошибка создания типа сообщения в БД: " + e.getSQLException());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            json = new MgsJsonObject("Ошибка создания типа сообщения в БД: " + e.getSQLException());
 
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-
-        // Закрываем сессию
-        session.close();
 
         return json;
     }
@@ -82,21 +83,23 @@ public class MessageTypes extends BaseServlet{
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public JsonObject update(MessageTypeObject messageTypeObject, @PathParam("id") String id) {
+    public MgsJsonObject update(MessageTypeObject messageTypeObject, @PathParam("id") String id) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
+        MgsJsonObject json;
 
-        // Открываем сессию с транзакцией
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        session.getTransaction().begin();
+        StatelessSession session = null;
 
-        //Сохраняем данные сценария в БД
-        MessageTypeDAO dao = new MessageTypeDAO(session);
         try {
+// Открываем сессию с транзакцией
 
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+
+
+            //Сохраняем данные сценария в БД
+            MessageTypeDAO dao = new MessageTypeDAO(session);
             MessageType mt = dao.getById(id);
 
             mt.setDescription(messageTypeObject.getDescription());
@@ -113,19 +116,19 @@ public class MessageTypes extends BaseServlet{
             mt.setActive(messageTypeObject.isActive());
             mt.setVerifyImsi(messageTypeObject.isVerifyImsi());
 
+            session.getTransaction().begin();
             dao.save(mt);
 
             session.getTransaction().commit();
-            json = JsonObject.Success();
+            json = MgsJsonObject.Success();
 
         }catch (JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            json = new JsonObject("Ошибка обновления типа сообщения в БД: " + e.getSQLException());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            json = new MgsJsonObject("Ошибка обновления типа сообщения в БД: " + e.getSQLException());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-
-        // Закрываем сессию
-        session.close();
 
         return json;
 
@@ -135,45 +138,45 @@ public class MessageTypes extends BaseServlet{
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public JsonObject delete(MessageTypeObject messageTypeObject, @PathParam("id") String id) {
+    public MgsJsonObject delete(MessageTypeObject messageTypeObject, @PathParam("id") String id) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
+        MgsJsonObject json;
 
         // Открываем сессию с транзакцией
         StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-
-        //Проверяем наличие сообщений с таким типом
-
         List<FilterProperty> filterProperties = new ArrayList<>();
         filterProperties.add(new FilterProperty("typeId", messageTypeObject.getTypeId()));
-        Query query = Utils.createQuery(session,  "From Message where typeId=:typeId", 0, 1, filterProperties, null)
-                .setReadOnly(true);
-        List result = query.list();
-        System.out.println(result.size());
-        if (result.size()>0){
-            throwException("Удаление невозможно. Тип сообщения \""+messageTypeObject.getTypeId()+"\" использован в сообщениях!");
-        }
 
-        session.getTransaction().begin();
-        //Сохраняем данные сценария в БД
-        MessageTypeDAO dao = new MessageTypeDAO(session);
         try {
-            MessageType mt = new MessageType(id);
-            dao.delete(mt);
-            session.getTransaction().commit();
-            json = JsonObject.Success();
+            //Проверяем наличие сообщений с таким типом
+
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            Query query = Utils.createQuery(session,  "From Message where typeId=:typeId", 0, 1, filterProperties, null)
+                    .setReadOnly(true);
+            List result = query.list();
+            System.out.println(result.size());
+            if (result.size()==0){
+                session.getTransaction().begin();
+                //Сохраняем данные сценария в БД
+                MessageTypeDAO dao = new MessageTypeDAO(session);
+
+                MessageType mt = new MessageType(id);
+                dao.delete(mt);
+                session.getTransaction().commit();
+                json = MgsJsonObject.Success();
+            } else
+                json = new MgsJsonObject("Удаление невозможно. Тип сообщения \""+messageTypeObject.getTypeId()+"\" использован в сообщениях!");
 
         }catch (JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            json = new JsonObject("Ошибка удаления типа сообщения в БД: " + e.getSQLException());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            json = new MgsJsonObject("Ошибка удаления типа сообщения в БД: " + e.getSQLException());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-
-        // Закрываем сессию
-        session.close();
 
         return json;
 
@@ -181,7 +184,7 @@ public class MessageTypes extends BaseServlet{
 
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
-    public JsonObject list(
+    public MgsJsonObject list(
             @QueryParam("start") int start,
             @QueryParam("limit") int limit,
             @QueryParam("page") int page,
@@ -191,9 +194,10 @@ public class MessageTypes extends BaseServlet{
     ){
         /* Авторизация пользователя по роли */
         authorizeOrThrow(viewMessageTypesRoles);
-
+        StatelessSession session = null;
+        MgsJsonObject json;
         try {
-            StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+
 
             List<FilterProperty> filterProperties = Utils.parseFilterProperties(filter);
             List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
@@ -215,12 +219,12 @@ public class MessageTypes extends BaseServlet{
             }
 
             String countQ = "SELECT count (mt.typeId) " + hqlFrom + hqlWhere;
+            session = Config.getHibernateSessionFactory().openStatelessSession();
             Query countQuery = Utils.createQuery(session, countQ, null, null, filterProperties, null);
             Long countResults = (Long) countQuery.uniqueResult();
 
             Query query = Utils.createQuery(session,  hqlFrom + hqlWhere, start, limit, filterProperties, sorterProperties)
                     .setReadOnly(true);
-
 
             List<MessageTypeObject> messageTypeObjects = new ArrayList<>();
 
@@ -247,16 +251,15 @@ public class MessageTypes extends BaseServlet{
                 );
             }
 
-            JsonObject json = new JsonObject(messageTypeObjects);
+            json = new MgsJsonObject(messageTypeObjects);
             json.setTotal(countResults);
 
-            session.close();
-
-
-            return json;
         }catch(Exception e){
             logger.error("Error: "+e.getMessage(), e);
-            return new JsonObject(e.getMessage());
+            json = new MgsJsonObject(e.getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
+        return json;
     }
 }

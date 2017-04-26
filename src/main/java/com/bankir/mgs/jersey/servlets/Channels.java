@@ -6,7 +6,7 @@ import com.bankir.mgs.User;
 import com.bankir.mgs.hibernate.Utils;
 import com.bankir.mgs.hibernate.model.MessageType;
 import com.bankir.mgs.jersey.model.ChannelObject;
-import com.bankir.mgs.jersey.model.JsonObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
 import org.slf4j.Logger;
@@ -27,12 +27,12 @@ public class Channels extends BaseServlet{
 
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
-    public JsonObject list(){
+    public MgsJsonObject list(){
         /* Авторизация пользователя по роли */
         authorizeOrThrow(viewChannelsRoles);
 
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        JsonObject json;
+        StatelessSession session = null;
+        MgsJsonObject json;
         try {
 
 
@@ -46,7 +46,7 @@ public class Channels extends BaseServlet{
                 hqlWhere += " and exists(From UserMessageType umt where umt.userId=:userId and umt.typeId=mt.typeId";
                 filterProperties.add(new FilterProperty("userId", user.getId()));
             }
-
+            session = Config.getHibernateSessionFactory().openStatelessSession();
             Query query = Utils.createQuery(session,  hqlFrom + hqlWhere, 0, 1000, filterProperties, null)
                     .setReadOnly(true);
 
@@ -71,15 +71,17 @@ public class Channels extends BaseServlet{
             if (channels.contains("O")) channelObjects.add(new ChannelObject("O", "VOICE"));
             if (channels.contains("F")) channelObjects.add(new ChannelObject("F", "FACEBOOK"));
 
-            json = new JsonObject(channelObjects);
+            json = new MgsJsonObject(channelObjects);
             json.setTotal((long) channels.length());
 
             return json;
         }catch(Exception e){
             logger.error("Error: "+e.getMessage(), e);
-            json = new JsonObject(e.getMessage());
+            json = new MgsJsonObject(e.getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-        session.close();
+
         return json;
     }
 }

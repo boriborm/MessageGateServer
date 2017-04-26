@@ -8,10 +8,9 @@ import com.bankir.mgs.hibernate.Utils;
 import com.bankir.mgs.hibernate.dao.ScenarioDAO;
 import com.bankir.mgs.infobip.InfobipMessageGateway;
 import com.bankir.mgs.infobip.model.InfobipObjects;
-import com.bankir.mgs.jersey.model.JsonObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 import com.bankir.mgs.jersey.model.ScenarioObject;
 import com.google.gson.Gson;
-import org.eclipse.jetty.client.api.ContentResponse;
 import org.eclipse.jetty.http.HttpMethod;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
@@ -33,7 +32,7 @@ public class Scenarios extends BaseServlet {
     @POST
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
-    public JsonObject create(ScenarioObject scenario) {
+    public MgsJsonObject create(ScenarioObject scenario) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
@@ -53,13 +52,13 @@ public class Scenarios extends BaseServlet {
         InfobipObjects.Scenario infobipScenario = null;
         try {
             ims = new InfobipMessageGateway();
-            ContentResponse response = ims.sendMessage(HttpMethod.POST, Config.getSettings().getInfobip().getScenariosUrl(), getInfobipScenario(scenario));
-            ims.stop();
-            infobipScenario = gson.fromJson(response.getContentAsString(), InfobipObjects.Scenario.class);
+            com.google.gson.JsonObject response = ims.sendMessage(HttpMethod.POST, Config.getSettings().getInfobip().getScenariosUrl(), getInfobipScenario(scenario));
+            infobipScenario = gson.fromJson(response, InfobipObjects.Scenario.class);
         } catch (Exception e) {
             logger.error("Error: "+e.getMessage(), e);
-            if (ims!=null) ims.stop();
             throwException(e.getMessage());
+        } finally {
+            if (ims!=null) try {ims.stop();} catch (Exception ignored){}
         }
 
         if (infobipScenario==null){
@@ -79,13 +78,14 @@ public class Scenarios extends BaseServlet {
         }
 
         // Открываем сессию с транзакцией
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        session.getTransaction().begin();
-
-        //Сохраняем данные сценария в БД
-        ScenarioDAO scDao = new ScenarioDAO(session);
-
+        StatelessSession session = null;
+        MgsJsonObject result;
         try {
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            session.getTransaction().begin();
+            //Сохраняем данные сценария в БД
+            ScenarioDAO scDao = new ScenarioDAO(session);
+
             Long scenarioId = scDao.addScenario(
                     newScenarioKey,
                     infobipScenario.getName(),
@@ -97,44 +97,40 @@ public class Scenarios extends BaseServlet {
             session.getTransaction().commit();
             scenario.setId(scenarioId);
             scenario.setKey(newScenarioKey);
-
+            result = new MgsJsonObject(scenario);
         } catch (JDBCException e) {
             logger.error("Error: " + e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            session.close();
-            throwException("Ошибка создания сценария в БД: "+e.getSQLException().getMessage());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){};
+            result = new MgsJsonObject("Ошибка создания сценария в БД: "+e.getSQLException().getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){};
         }
 
-        // Закрываем сессию
-        session.close();
-
         // возвращаем в ответ данные созданного сценария
-        return new JsonObject(scenario);
+        return result;
     }
 
     @GET
     @Path("/get")
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
-    public JsonObject getScenario(@QueryParam("scenariokey") String scenarioKey) {
+    public MgsJsonObject getScenario(@QueryParam("scenariokey") String scenarioKey) {
 
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
         InfobipObjects.Scenario infobipScenario = null;
         Gson gson = Config.getGsonBuilder().create();
         InfobipMessageGateway ims = null;
         try {
             ims = new InfobipMessageGateway();
             String getUrl = Config.getSettings().getInfobip().getScenariosUrl()+"/"+scenarioKey;
-            ContentResponse response = ims.sendMessage(HttpMethod.GET, getUrl, null);
-            ims.stop();
-            infobipScenario = gson.fromJson(response.getContentAsString(), InfobipObjects.Scenario.class);
-
+            com.google.gson.JsonObject response = ims.sendMessage(HttpMethod.GET, getUrl, null);
+            infobipScenario = gson.fromJson(response, InfobipObjects.Scenario.class);
         } catch (Exception e) {
             logger.error("Error: " + e.getMessage(), e);
-            if (ims!=null) ims.stop();
             throwException(e.getMessage());
+        } finally {
+            if (ims!=null) try {ims.stop();} catch (Exception ignored){}
         }
 
         if (infobipScenario==null) throwException("Ошибка запроса сценария на сервере Infobip");
@@ -146,18 +142,18 @@ public class Scenarios extends BaseServlet {
         }
 
         // Обновляем данные в БД
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-
-        ScenarioDAO scDao = new ScenarioDAO(session);
-
-        com.bankir.mgs.hibernate.model.Scenario hibernateScenario;
-
+        StatelessSession session = null;
         ScenarioObject scenario = null;
-        // Открываем сессию с транзакцией
-        session.getTransaction().begin();
-        //Сохраняем данные сценария в БД
+        MgsJsonObject result;
         try {
-            hibernateScenario = scDao.getByKey(scenarioKey, Config.getSettings().getInfobip().getLogin());
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            ScenarioDAO scDao = new ScenarioDAO(session);
+
+            // Открываем сессию с транзакцией
+            session.getTransaction().begin();
+            //Сохраняем данные сценария в БД
+
+            com.bankir.mgs.hibernate.model.Scenario hibernateScenario = scDao.getByKey(scenarioKey, Config.getSettings().getInfobip().getLogin());
 
             hibernateScenario.setScenarioName(infobipScenario.getName());
             List<ScenarioObject.Flow> listFlow = new ArrayList<>();
@@ -170,14 +166,16 @@ public class Scenarios extends BaseServlet {
             scDao.save(hibernateScenario);
             session.getTransaction().commit();
             scenario = getScenario(hibernateScenario);
+            result = new MgsJsonObject(scenario);
 
         } catch (JDBCException e) {
-            session.getTransaction().rollback();
-            throwException("Ошибка сохранения сценария в БД: " + e.getSQLException().getMessage());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            result = new MgsJsonObject("Ошибка сохранения сценария в БД: " + e.getSQLException().getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){};
         }
-        session.close();
 
-        return new JsonObject(scenario);
+        return result;
     }
 
 
@@ -185,7 +183,7 @@ public class Scenarios extends BaseServlet {
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public JsonObject update(ScenarioObject scenario, @PathParam("id") Long scenarioId) {
+    public MgsJsonObject update(ScenarioObject scenario, @PathParam("id") Long scenarioId) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
@@ -207,7 +205,7 @@ public class Scenarios extends BaseServlet {
             throwException("Необходимо задать имя сценария");
         }
 
-        JsonObject json = null;
+
 
         // Обновляем данные сценария в Инфобипе
         InfobipMessageGateway ims = null;
@@ -215,13 +213,13 @@ public class Scenarios extends BaseServlet {
         try {
             ims = new InfobipMessageGateway();
             String putUrl = Config.getSettings().getInfobip().getScenariosUrl()+"//"+scenarioKey;
-            ContentResponse response = ims.sendMessage(HttpMethod.PUT, putUrl, getInfobipScenario(scenario));
-            ims.stop();
-            infobipScenario = gson.fromJson(response.getContentAsString(), InfobipObjects.Scenario.class);
+            com.google.gson.JsonObject response = ims.sendMessage(HttpMethod.PUT, putUrl, getInfobipScenario(scenario));
+            infobipScenario = gson.fromJson(response, InfobipObjects.Scenario.class);
         } catch (Exception e) {
             logger.error("Error: " + e.getMessage(), e);
-            if (ims!=null) ims.stop();
             throwException(e.getMessage());
+        } finally {
+            if (ims!=null) try {ims.stop();} catch (Exception ignored){}
         }
 
         if (infobipScenario.getServiceErrorMessage()!=null) {
@@ -229,17 +227,18 @@ public class Scenarios extends BaseServlet {
             throwException(infobipScenario.getServiceErrorMessage());
         }
 
+        MgsJsonObject result = null;
 
         // Обновляем данные в БД
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-
-        ScenarioDAO scDao = new ScenarioDAO(session);
-        com.bankir.mgs.hibernate.model.Scenario scenarioInBD;
-
-        // Открываем сессию с транзакцией
-        session.getTransaction().begin();
+        StatelessSession session = null;
         //Сохраняем данные сценария в БД
         try {
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            ScenarioDAO scDao = new ScenarioDAO(session);
+            com.bankir.mgs.hibernate.model.Scenario scenarioInBD;
+            // Открываем сессию с транзакцией
+            session.getTransaction().begin();
+
             scenarioInBD = scDao.getById(scenarioId);
             //Обновляем сведения о имени сценария в объекте
             scenarioInBD.setScenarioName(scenario.getName());
@@ -250,21 +249,22 @@ public class Scenarios extends BaseServlet {
             scDao.save(scenarioInBD);
             session.getTransaction().commit();
 
+            result = MgsJsonObject.Success();
 
         } catch (JDBCException e) {
             logger.error("Error: " + e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            session.close();
-            throwException("Ошибка сохранения сценария в БД: " + e.getSQLException().getMessage());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){};
+            result = new MgsJsonObject("Ошибка сохранения сценария в БД: " + e.getSQLException().getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){};
         }
-        session.close();
 
-        return new JsonObject(true);
+        return result;
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
-    public JsonObject list(
+    public MgsJsonObject list(
             @QueryParam("start") int start,
             @QueryParam("limit") int limit,
             @QueryParam("page") int page,
@@ -274,9 +274,10 @@ public class Scenarios extends BaseServlet {
     ){
         /* Авторизация пользователя по роли */
         authorizeOrThrow(viewScenariosRoles);
-
+        StatelessSession session = null;
+        MgsJsonObject result;
         try {
-            StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+            session = Config.getHibernateSessionFactory().openStatelessSession();
 
             List<FilterProperty> filterProperties = Utils.parseFilterProperties(filter);
             List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
@@ -301,16 +302,17 @@ public class Scenarios extends BaseServlet {
             for (Object hibernateScenario:hibernateScenarios){
                 scenarios.add(getScenario((com.bankir.mgs.hibernate.model.Scenario) hibernateScenario));
             }
-            JsonObject json = new JsonObject(scenarios);
+            MgsJsonObject json = new MgsJsonObject(scenarios);
             json.setTotal(countResults);
 
-            session.close();
-
-            return json;
+            result = json;
         }catch(JDBCException e){
             logger.error("Error: " + e.getSQLException().getMessage(), e);
-            return new JsonObject(e.getSQLException().getMessage());
+            result = new MgsJsonObject(e.getSQLException().getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){};
         }
+        return result;
     }
 
 
@@ -348,49 +350,47 @@ public class Scenarios extends BaseServlet {
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public JsonObject delete(ScenarioObject scenario, @PathParam("id") Long id) {
+    public MgsJsonObject delete(ScenarioObject scenario, @PathParam("id") Long id) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
-
-        // Открываем сессию с транзакцией
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-
-        //Проверяем наличие сообщений с таким типом
-
-        List<FilterProperty> filterProperties = new ArrayList<>();
-        filterProperties.add(new FilterProperty("scenarioId", id));
-        Query query = Utils.createQuery(session,  "From Message where scenarioId=:scenarioId", 0, 1, filterProperties, null)
-                .setReadOnly(true);
-        List result = query.list();
-
         if (scenario.getKey().equals(Config.getSettings().getDefaultScenarioKey())){
             throwException("Удаление сценария по умолчанию невозможно!");
         }
-
-        if (result.size()>0){
-            throwException("Удаление невозможно. Сценарий \""+scenario.getName()+"\" использован в сообщениях!");
-        }
-
-        session.getTransaction().begin();
-        //Сохраняем данные сценария в БД
-        ScenarioDAO scDao = new ScenarioDAO(session);
+        MgsJsonObject result;
+        // Открываем сессию с транзакцией
+        StatelessSession session = null;
         try {
-            com.bankir.mgs.hibernate.model.Scenario hibernateScenario = new com.bankir.mgs.hibernate.model.Scenario();
-            hibernateScenario.setId(id);
-            scDao.delete(hibernateScenario);
-            session.getTransaction().commit();
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            //Проверяем наличие сообщений с таким типом
 
+            List<FilterProperty> filterProperties = new ArrayList<>();
+            filterProperties.add(new FilterProperty("scenarioId", id));
+            Query query = Utils.createQuery(session,  "From Message where scenarioId=:scenarioId", 0, 1, filterProperties, null)
+                    .setReadOnly(true);
+            List msg = query.list();
+
+            if (msg.size()>0){
+                result = new MgsJsonObject("Удаление невозможно. Сценарий \""+scenario.getName()+"\" использован в сообщениях!");
+            } else {
+                session.getTransaction().begin();
+                //Сохраняем данные сценария в БД
+                ScenarioDAO scDao = new ScenarioDAO(session);
+                com.bankir.mgs.hibernate.model.Scenario hibernateScenario = new com.bankir.mgs.hibernate.model.Scenario();
+                hibernateScenario.setId(id);
+                scDao.delete(hibernateScenario);
+                session.getTransaction().commit();
+                return MgsJsonObject.Success();
+            }
         }catch (JDBCException e){
             logger.error("Error: " + e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            throwException("Ошибка удаления сценария в БД: " + e.getSQLException());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){};
+            result = new MgsJsonObject("Ошибка удаления сценария в БД: " + e.getSQLException().getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){};
         }
 
-        // Закрываем сессию
-        session.close();
-
-        return JsonObject.Success();
+        return result;
 
     }
 }

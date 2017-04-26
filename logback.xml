@@ -123,7 +123,7 @@
     </logger>
 -->
     <!-- По умолчанию вывод в файл other.log только ошибок-->
-    <root level="INFO">
+    <root level="DEBUG">
         <!--<appender-ref ref="STDOUT" />-->
     </root>
 </configuration>

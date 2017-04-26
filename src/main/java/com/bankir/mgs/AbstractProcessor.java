@@ -5,11 +5,14 @@ import com.bankir.mgs.infobip.model.InfobipObjects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.persistence.PersistenceException;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 public class AbstractProcessor implements Runnable {
+    private final Logger logger = LoggerFactory.getLogger(getClass().getName());
     private volatile boolean processorEnabled = false;
     private volatile long sleepTime = 10000;
     private volatile boolean processSignal=false;
@@ -24,7 +27,7 @@ public class AbstractProcessor implements Runnable {
 
             this.thread = new Thread(this);
             this.thread.start();
-            this.setStatus("Processor "+this.getClass().getName()+" started");
+            this.setStatus(new Date(), "Processor "+this.getClass().getName()+" started");
         }
     }
 
@@ -36,9 +39,9 @@ public class AbstractProcessor implements Runnable {
         logger.info("Stopping processor by user {}", user);
     }
 
-    private void stopProcessorWithError(Exception e){
+    private void stopProcessorWithError(Date date, Exception e){
         processorEnabled = false;
-        this.setErrorStatus("Error: "+e.getMessage(), e);
+        this.setErrorStatus(date, " Error: "+e.getMessage(), e);
         this.thread = null;
         InfobipMessageGateway ims = null;
 
@@ -52,21 +55,23 @@ public class AbstractProcessor implements Runnable {
             destinations.add(destination);
         }
 
-        String msg = "Stop processor with error "+getClass().getName()+ e.getMessage().substring(0,100);
+        String msg = date + " Stop processor with error "+getClass().getName()+ e.getMessage().substring(0,100);
 
         try {
             ims = new InfobipMessageGateway();
-            ims.sendAdvancedMessage( new InfobipObjects.OmniAdvancedMessage( destinations, msg));
+            logger.debug("Try send sms about error");
+            ims.sendSimpleMessage( new InfobipObjects.OmniSimpleMessage( destinations, msg));
+            logger.debug("Sms about error sent");
         } catch (InfobipMessageGateway.RequestErrorException ignored) {
+            logger.error("Sms about error sent with error:", ignored);
         }
 
         if (ims!=null){
             try{ ims.stop();} catch (Exception ignored){}
         }
-
     }
 
-    public synchronized void setSleepTime(long sleepTime){
+    synchronized void setSleepTime(long sleepTime){
         this.sleepTime = sleepTime;
     }
 
@@ -91,8 +96,16 @@ public class AbstractProcessor implements Runnable {
                     processSignal = false;
                     try {
                         process();
-                    } catch (Exception e) {
-                        stopProcessorWithError(e);
+                    }catch(PersistenceException pe){
+                        //Если ошибка соединения, то ничего не делаем, просто выходим из процесса.
+                        Throwable cause = getThrowableCaused(pe, SQLException.class);
+                        if (cause!=null) {
+                            SQLException sqlException = (SQLException) cause;
+                            logger.error("PROCESSOR SQL ERROR: {}, {}", sqlException.getErrorCode(), sqlException.getMessage());
+                        }
+                    }catch (Exception e) {
+                        logger.error("STOP PROCESSOR. PROCESSOR ERROR:", e);
+                        stopProcessorWithError(new Date(), e);
                         return;
                     }
                 }
@@ -100,24 +113,38 @@ public class AbstractProcessor implements Runnable {
 
             }
         } catch (InterruptedException e) {
+            logger.error("PROCESS INTERRUPTION:", e);
+            stopProcessorWithError(new Date(), e);
+            return;
         }
         this.thread = null;
-        this.setStatus("Processor "+this.getClass().getName()+ " stopped");
+        this.setStatus(new Date(), "Processor "+this.getClass().getName()+ " stopped");
     }
 
     protected void process()  throws Exception {}
 
     public String getStatus() { return this.status; }
 
-    protected void setStatus(String status) {
-        this.status = status;
-        Logger logger = LoggerFactory.getLogger(getClass().getName());
+    private void setStatus(Date date, String status) {
+        this.status = date+" "+status;
         logger.info(this.getStatus());
-    };
+    }
 
-    protected void setErrorStatus(String status, Exception e) {
-        this.status = status;
-        Logger logger = LoggerFactory.getLogger(getClass().getName());
+    void setErrorStatus(Date date, String status, Exception e) {
+        this.status = date+ " "+ status;
         logger.error(this.getStatus(), e);
+    }
+
+    private Throwable getThrowableCaused(Throwable e, Class clazz) {
+        Throwable cause = null;
+        Throwable result = e;
+
+        while(null != (cause = result.getCause()) && (result != cause))  {
+            result = cause;
+            if (result.getClass().isAssignableFrom(clazz)){
+                break;
+            }
+        }
+        return result;
     }
 }

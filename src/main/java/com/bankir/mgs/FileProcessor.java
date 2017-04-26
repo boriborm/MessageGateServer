@@ -63,12 +63,12 @@ public class FileProcessor extends AbstractProcessor {
         session.close();
 
         if (folder==null||!(folder.exists()&&folder.isDirectory())){
-            this.setErrorStatus("Некорректный путь в настройках процессора", null);
+            this.setErrorStatus(new Date(), "Некорректный путь в настройках процессора", null);
             return;
         }
 
         if (user==null){
-            this.setErrorStatus("Несуществующий пользователь в настройках процессора", null);
+            this.setErrorStatus(new Date(), "Несуществующий пользователь в настройках процессора", null);
             return;
         }
 
@@ -221,14 +221,14 @@ public class FileProcessor extends AbstractProcessor {
         try {
             writer.write(sdf.format(new Date())+" "+str);
             writer.newLine();
-        } catch (IOException e) {
+        } catch (IOException ignored) {
         }
     }
     private static void writeToLog(BufferedWriter writer, String str){
         try {
             writer.write("                      "+str);
             writer.newLine();
-        } catch (IOException e) {
+        } catch (IOException ignored) {
         }
     }
 

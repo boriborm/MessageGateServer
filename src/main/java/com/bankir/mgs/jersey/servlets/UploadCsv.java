@@ -8,13 +8,13 @@ public class UploadCsv {
     @POST
     @Path("/pdf")
     @Consumes({MediaType.MULTIPART_FORM_DATA})
-    public JsonObject uploadPdfFile(
+    public MgsJsonObject uploadPdfFile(
             @FormDataParam("charset") String charset,
             @FormDataParam("file") InputStream fileInputStream,
             @FormDataParam("file") FormDataContentDisposition fileMetaData) throws Exception
     {
         System.out.println("Charset "+charset);
-        JsonObject jResp;
+        MgsJsonObject jResp;
 
         try
         {
@@ -26,10 +26,10 @@ public class UploadCsv {
                 System.out.println(line);
             }
             bufferedReader.close();
-            jResp = new JsonObject(true);
+            jResp = new MgsJsonObject(true);
         } catch (IOException e)
         {
-            jResp = new JsonObject(e.getMessage());
+            jResp = new MgsJsonObject(e.getMessage());
         }
         return jResp;
     }

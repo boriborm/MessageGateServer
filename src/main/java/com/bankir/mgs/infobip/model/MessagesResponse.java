@@ -6,7 +6,7 @@ public class MessagesResponse {
 
     private String bulkId;
     private List<Message> messages;
-//    private InfobipObjects.RequestError requestError;
+    private InfobipObjects.RequestError requestError;
 
     public String getBulkId() {
         return bulkId;
@@ -16,9 +16,9 @@ public class MessagesResponse {
         return messages;
     }
 
-//    public InfobipObjects.RequestError getRequestError() {
-//        return requestError;
-//    }
+    public InfobipObjects.RequestError getRequestError() {
+        return requestError;
+    }
 
 //  public void setRequestError(InfobipObjects.RequestError requestError) {
 //        this.requestError = requestError;

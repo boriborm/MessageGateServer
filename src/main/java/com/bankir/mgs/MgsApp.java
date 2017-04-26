@@ -7,6 +7,7 @@ import org.eclipse.jetty.server.session.SessionHandler;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.util.resource.Resource;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.servlet.ServletContainer;
@@ -80,6 +81,8 @@ public class MgsApp
 
             ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
             context.setContextPath("/");
+            context.setBaseResource(Resource.newResource(Config.getSettings().getRootDir()));
+            context.setAttribute("javax.servlet.context.tempdir", new File(Config.getSettings().getTmpDir()));
 
             context.addFilter(ResourcesAccessFilter.class, "/*", EnumSet.of(DispatcherType.REQUEST, DispatcherType.INCLUDE));
             SessionHandler session = context.getSessionHandler();

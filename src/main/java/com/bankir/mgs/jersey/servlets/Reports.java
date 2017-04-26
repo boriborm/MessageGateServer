@@ -6,7 +6,7 @@ import com.bankir.mgs.SorterProperty;
 import com.bankir.mgs.User;
 import com.bankir.mgs.hibernate.Utils;
 import com.bankir.mgs.hibernate.model.Report;
-import com.bankir.mgs.jersey.model.JsonObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 import com.bankir.mgs.jersey.model.ReportObject;
 import org.hibernate.JDBCException;
 import org.hibernate.ScrollMode;
@@ -31,7 +31,7 @@ public class Reports extends BaseServlet{
 
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
-    public JsonObject list(
+    public MgsJsonObject list(
             @QueryParam("start") int start,
             @QueryParam("limit") int limit,
             @QueryParam("page") int page,
@@ -42,20 +42,20 @@ public class Reports extends BaseServlet{
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(viewReportsRoles);
-        JsonObject json;
+        MgsJsonObject result;
 
         if (messageId== null) {
-            json = new JsonObject(true);
-            json.setTotal(0L);
-            return json;
+            result = new MgsJsonObject(true);
+            result.setTotal(0L);
+            return result;
         }
 
         System.out.println("Start create report");
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-
+        StatelessSession session = null;
+        ScrollableResults results = null;
         try {
 
-
+            session = Config.getHibernateSessionFactory().openStatelessSession();
             List<FilterProperty> filterProperties = Utils.parseFilterProperties(filter);
             List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
             if (sorterProperties.size()==0) sorterProperties.add(new SorterProperty("reportDate","asc"));
@@ -76,7 +76,7 @@ public class Reports extends BaseServlet{
 
             Query query = Utils.createQuery(session,  hqlFrom + hqlWhere, start, limit, filterProperties, sorterProperties)
                     .setReadOnly(true);
-            ScrollableResults results = query.scroll(ScrollMode.FORWARD_ONLY);
+            results = query.scroll(ScrollMode.FORWARD_ONLY);
 
             List<ReportObject> reports = new ArrayList<>();
 
@@ -101,20 +101,20 @@ public class Reports extends BaseServlet{
                     )
                 );
             }
-            results.close();
 
-            json = new JsonObject(reports);
-            json.setTotal(countResults);
+            result = new MgsJsonObject(reports);
+            result.setTotal(countResults);
 
         }catch(JDBCException e){
             logger.error("Error: " + e.getSQLException().getMessage(), e);
-            System.out.println("error:"+e.getSQLException().getMessage());
-            json = new JsonObject(e.getSQLException().getMessage());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            result = new MgsJsonObject(e.getSQLException().getMessage());
+        } finally {
+            if (results!=null) try {results.close();} catch (Exception ignored){}
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-        session.close();
 
-        System.out.println("Stop create report");
-        return json;
+        return result;
     }
 
 }

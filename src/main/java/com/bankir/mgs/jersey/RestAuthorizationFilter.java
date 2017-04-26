@@ -95,7 +95,7 @@ public class RestAuthorizationFilter implements ContainerRequestFilter {
 
     /*
     private static void authorize(ContainerRequestContext requestContext, String sessionId){
-        Response response = JsonObject.getErrorResponse(Response.Status.UNAUTHORIZED, Config.MSG_UNAUTHORIZED);
+        Response response = MgsJsonObject.getErrorResponse(Response.Status.UNAUTHORIZED, Config.MSG_UNAUTHORIZED);
         response.getHeaders().add(HttpHeaders.WWW_AUTHENTICATE,"Basic realm=\"123\"");
         requestContext.abortWith(response);
     }

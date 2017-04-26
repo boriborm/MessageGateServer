@@ -4,11 +4,13 @@ import java.util.List;
 
 public class Settings {
 
-    private int port = 8080;
+    private int port;
     private String defaultScenarioKey;
     private String messageIdPrefix;
     private boolean useProxy;
     private boolean useFileProcessor;
+    private String rootDir;
+    private String tmpDir;
     private String adminPath;
     private String opersPath;
     private int sessionTimeout;
@@ -24,13 +26,13 @@ public class Settings {
     private List<Property> defaultServletProperties;
     private Notification stopProcessNotification;
 
-    public int getSessionTimeout() {
+    int getSessionTimeout() {
         return sessionTimeout;
     }
-    public String getAdminPath() {
+    String getAdminPath() {
         return adminPath;
     }
-    public String getOpersPath() {
+    String getOpersPath() {
         return opersPath;
     }
 
@@ -47,32 +49,32 @@ public class Settings {
         }
     }
 
-    public static class QueueProcessorConfig {
+    static class QueueProcessorConfig {
         private int maxMessageHandlerThreads;
         private int sleepTimeSeconds;
 
-        public int getMaxMessageHandlerThreads() {
+        int getMaxMessageHandlerThreads() {
             return maxMessageHandlerThreads;
         }
 
-        public long getSleepTime() {
+        long getSleepTime() {
             return sleepTimeSeconds * 1000;
         }
     }
 
-    public static class DeliveryReportProcessorConfig {
+    static class DeliveryReportProcessorConfig {
         private int maxSleepTimeSeconds;
         private int minSleepTimeSeconds;
 
-        public long getMaxSleepTime() {
+        long getMaxSleepTime() {
             return maxSleepTimeSeconds * 1000;
         }
-        public long getMinSleepTime() {
+        long getMinSleepTime() {
             return minSleepTimeSeconds * 1000;
         }
     }
 
-    public static class FilesProcessor{
+    static class FilesProcessor{
 
         private String path;
         private String charset;
@@ -84,11 +86,11 @@ public class Settings {
         }
         public String getCharset() {return charset;}
 
-        public String getLogPath() {
+        String getLogPath() {
             return logPath;
         }
 
-        public String getFailurePath() {
+        String getFailurePath() {
             return failurePath;
         }
 
@@ -100,7 +102,7 @@ public class Settings {
     public static class Infobip{
         private String sendMessageUrl;
         private String imsiUrl;
-        //private String infobipOmniSimpleMessageUrl;
+        private String sendSimpleMessageUrl;
         private String scenariosUrl;
         private String reportsUrl;
         private String login;
@@ -109,11 +111,11 @@ public class Settings {
         public String getSendMessageUrl() {
             return sendMessageUrl;
         }
-/*
-        public String getInfobipOmniSimpleMessageUrl() {
-            return infobipOmniSimpleMessageUrl;
+
+        public String getSendSimpleMessageUrl() {
+            return sendSimpleMessageUrl;
         }
-*/
+
 
         public String getImsiUrl() {
             return imsiUrl;
@@ -161,14 +163,8 @@ public class Settings {
 
     public static class Notification{
         private String[] phones;
-        private String[] channels;
-
-        public String[] getPhones() {
+        String[] getPhones() {
             return phones;
-        }
-
-        public String[] getChannels() {
-            return channels;
         }
     }
 
@@ -188,7 +184,7 @@ public class Settings {
     public boolean isUseProxy() {
         return useProxy;
     }
-    public String getMessageIdPrefix() {
+    String getMessageIdPrefix() {
         return messageIdPrefix;
     }
 
@@ -200,11 +196,11 @@ public class Settings {
         return proxy;
     }
 
-    public FilesProcessor getFilesProcessor() {
+    FilesProcessor getFilesProcessor() {
         return filesProcessor;
     }
 
-    public boolean isUseFileProcessor() {
+    boolean isUseFileProcessor() {
         return useFileProcessor;
     }
 
@@ -216,19 +212,27 @@ public class Settings {
         return defaultMessageType;
     }
 
-    public SSLConfig getSslConfig() {
+    SSLConfig getSslConfig() {
         return sslConfig;
     }
 
-    public QueueProcessorConfig getQueueProcessorConfig() {
+    QueueProcessorConfig getQueueProcessorConfig() {
         return queueProcessor;
     }
 
-    public DeliveryReportProcessorConfig getDeliveryReportProcessorConfig() {
+    DeliveryReportProcessorConfig getDeliveryReportProcessorConfig() {
         return deliveryReportProcessor;
     }
 
-    public Notification getStopProcessNotificationConfig() {
+    Notification getStopProcessNotificationConfig() {
         return stopProcessNotification;
+    }
+
+    String getRootDir() {
+        return rootDir;
+    }
+
+    String getTmpDir() {
+        return tmpDir;
     }
 }

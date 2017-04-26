@@ -11,6 +11,7 @@ import org.hibernate.JDBCException;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
 import org.hibernate.StatelessSession;
+import org.hibernate.exception.JDBCConnectionException;
 import org.hibernate.query.Query;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,30 +78,38 @@ public class QueueMessagesHandler extends Observable implements Runnable {
     @Override
     public void run() {
 
-        session = Config.getHibernateSessionFactory().openStatelessSession();
-        msgDAO = new MessageDAO(session);
-        qmDAO = new QueuedMessageDAO(session);
-        reportDAO = new ReportDAO(session);
         try {
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            msgDAO = new MessageDAO(session);
+            qmDAO = new QueuedMessageDAO(session);
+            reportDAO = new ReportDAO(session);
+
             ims = new InfobipMessageGateway();
             while (true) {
                 MessageData msgData = queue.take();
                 if (msgData == DONE) {
                     queue.add(DONE); //Чтобы другие потоки не зависли в ожидании данных в очереди
+                    logger.debug("queueMessagesHandler id: {} get DONE message, thread-id: {}", handlerId, Thread.currentThread().getId());
                     break;
                 }
                 handleMessage(msgData);
             }
         } catch (InterruptedException ie) {
-            logger.debug("INTERRUPTED queueMessagesHandler id: {}, thread-id: {}", handlerId, Thread.currentThread().getId());
+            logger.error("INTERRUPTED queueMessagesHandler id: {}, thread-id: {}", handlerId, Thread.currentThread().getId(), ie);
+        } catch (JDBCConnectionException e) {
+            this.setChanged();
+            this.notifyObservers(e);
+            logger.error("JDBCConnection EXCEPTION queueMessagesHandler id: {}, thread-id: {}, exception: {}", handlerId, Thread.currentThread().getId(), e.getSQLException().getMessage(), e);
         } catch (InfobipMessageGateway.RequestErrorException e) {
             this.setChanged();
             this.notifyObservers(e);
-            logger.debug("EXCEPTION queueMessagesHandler id: {}, thread-id: {}, exception: {}", handlerId, Thread.currentThread().getId(), e.getMessage());
+            logger.error("Request EXCEPTION queueMessagesHandler id: {}, thread-id: {}, exception: {}, type:{}", handlerId, Thread.currentThread().getId(), e.getMessage(), e.getType(), e);
+        } finally {
+            if (ims!=null) ims.stop();
+            if (session!=null) try{ session.close();} catch (Exception ignored){}
         }
 
-        ims.stop();
-        session.close();
+
         ims = null;
         session = null;
         msgDAO = null;
@@ -141,54 +150,52 @@ public class QueueMessagesHandler extends Observable implements Runnable {
                 )
         );
 
-        if (messagesResponse.getMessages().size() > 0) {
-
-            session.getTransaction().begin();
-
-            InfobipObjects.Status status;
-            try {
-
-                // Удаляем сообщение из очереди рассылки
-                qmDAO.delete(qmsg);
-
-            } catch (JDBCException e) {
-                session.getTransaction().rollback();
+        if (messagesResponse.getRequestError()!=null){
+            if (messagesResponse.getRequestError().getServiceException()!=null) {
+                logger.error("REQUEST ERROR: {}, {}", messagesResponse.getRequestError().getServiceException().getMessageId(), messagesResponse.getRequestError().getServiceException().getText());
             }
+        }
+        if (messagesResponse.getMessages()!=null) {
+            if (messagesResponse.getMessages().size() > 0) {
 
+                InfobipObjects.Status status;
+                session.getTransaction().begin();
 
-            try {
-                for (com.bankir.mgs.infobip.model.Message infobipMessage:messagesResponse.getMessages()) {
-                    status = infobipMessage.getStatus();
-                    Long msgId = null;
-                    if (msg.getExternalId().equals(infobipMessage.getMessageId())) {
-                        msgId = msg.getId();
-                    }else{
+                try {
+                    // Удаляем сообщение из очереди рассылки
+                    qmDAO.delete(qmsg);
 
-                        Message msg2 = msgDAO.getByExternalId(infobipMessage.getMessageId());
-                        if (msg2!=null){
-                            msgId = msg2.getId();
+                    for (com.bankir.mgs.infobip.model.Message infobipMessage : messagesResponse.getMessages()) {
+                        status = infobipMessage.getStatus();
+                        Long msgId = null;
+                        if (msg.getExternalId().equals(infobipMessage.getMessageId())) {
+                            msgId = msg.getId();
+                        } else {
+
+                            Message msg2 = msgDAO.getByExternalId(infobipMessage.getMessageId());
+                            if (msg2 != null) {
+                                msgId = msg2.getId();
+                            }
+                        }
+
+                        if (msgId != null) {
+                            Report report = new Report(
+                                    msgId,
+                                    status.getName(),
+                                    status.getGroupName(),
+                                    status.getDescription()
+                            );
+                            //Добавляем отчёт об отправке
+                            reportDAO.add(report);
                         }
                     }
+                    session.getTransaction().commit();
 
-                    if (msgId!=null) {
-                        Report report = new Report(
-                                msgId,
-                                status.getName(),
-                                status.getGroupName(),
-                                status.getDescription()
-                        );
-                        //Добавляем отчёт об отправке
-                        reportDAO.add(report);
-                    }
+                } catch (JDBCException e) {
+                    session.getTransaction().rollback();
                 }
 
-
-                session.getTransaction().commit();
-
-            } catch (JDBCException e) {
-                session.getTransaction().rollback();
             }
-
         }
     }
 

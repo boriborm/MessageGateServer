@@ -3,10 +3,10 @@ package com.bankir.mgs.jersey.servlets;
 import com.bankir.mgs.*;
 import com.bankir.mgs.hibernate.Utils;
 import com.bankir.mgs.hibernate.model.Message;
-import com.bankir.mgs.jersey.model.JsonObject;
 import com.bankir.mgs.jersey.model.MessageCreationRequestObject;
 import com.bankir.mgs.jersey.model.MessageCreationResponseObject;
 import com.bankir.mgs.jersey.model.MessageObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 import org.hibernate.JDBCException;
 import org.hibernate.ScrollMode;
 import org.hibernate.ScrollableResults;
@@ -35,10 +35,10 @@ public class Messages extends BaseServlet {
 
         authorizeOrThrow(createMessagesRoles);
 
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+        StatelessSession session = null;
         Object response;
         try {
-
+            session = Config.getHibernateSessionFactory().openStatelessSession();
             MessageGenerator mg = new MessageGenerator(user, session, null);
             MessageCreationResponseObject resp = mg.generate(data);
 
@@ -52,10 +52,10 @@ public class Messages extends BaseServlet {
 
         } catch (Exception e) {
             logger.error("Error: "+e.getMessage(), e);
-            response = new JsonObject(e.getMessage());
+            response = new MgsJsonObject(e.getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-
-        session.close();
 
         if (user.userWithRole(User.ROLE_RESTSERVICE)) request.getSession().invalidate();
 
@@ -64,7 +64,7 @@ public class Messages extends BaseServlet {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
-    public JsonObject list(
+    public MgsJsonObject list(
             @DefaultValue("0") @QueryParam("start") int start,
             @DefaultValue("50") @QueryParam("limit") int limit,
             @DefaultValue("1") @QueryParam("page") int page,
@@ -120,12 +120,14 @@ public class Messages extends BaseServlet {
 
         List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
 
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        JsonObject json;
+        StatelessSession session = null;
+        MgsJsonObject json;
+        ScrollableResults results = null;
         try {
 
 
             String countQ = "Select count (m.id) " + hql;
+            session = Config.getHibernateSessionFactory().openStatelessSession();
             Query countQuery = Utils.createQuery(session, countQ, null, null, filterProperties, null);
             Long countResults = (Long) countQuery.uniqueResult();
 
@@ -136,7 +138,7 @@ public class Messages extends BaseServlet {
             com.bankir.mgs.hibernate.model.Scenario scenario;
             com.bankir.mgs.hibernate.model.MessageType msgType;
 
-            ScrollableResults results = query.scroll(ScrollMode.FORWARD_ONLY);
+            results = query.scroll(ScrollMode.FORWARD_ONLY);
 
             List<MessageObject> messages = new ArrayList<>();
             while (results.next()) {
@@ -180,19 +182,20 @@ public class Messages extends BaseServlet {
 
                 messages.add(message);
             }
-            results.close();
 
-            json = new JsonObject(messages);
+            json = new MgsJsonObject(messages);
             json.setTotal(countResults);
 
 
 
         }catch(JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            json = new JsonObject(e.getSQLException().getMessage());
+            json = new MgsJsonObject(e.getSQLException().getMessage());
+        } finally {
+            if (results!=null) try {results.close();} catch (Exception ignored){}
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
 
-        session.close();
         return json;
     }
 

@@ -36,15 +36,24 @@ public class DeliveryReportProcessor extends AbstractProcessor {
         String prevMessageId = null;
         //System.out.println("process deliveryReport " + (new Date()).toString());
 
-        InfobipMessageGateway ims = new InfobipMessageGateway();
-
-        StatelessSession sessionForTransactions = Config.getHibernateSessionFactory().openStatelessSession();
-        MessageDAO msgDAO = new MessageDAO(sessionForTransactions);
-        ReportDAO rptDAO = new ReportDAO(sessionForTransactions);
+        InfobipMessageGateway ims = null;
+        StatelessSession sessionForTransactions = null;
 
         Message msg = null;
         try {
+            ims = new InfobipMessageGateway();
+
+
             DeliveryReport deliveryReport = ims.getReport();
+
+
+            if (deliveryReport.getRequestError()!=null){
+                if (deliveryReport.getRequestError().getServiceException()!=null) {
+                    logger.error("REQUEST ERROR: {}, {}", deliveryReport.getRequestError().getServiceException().getMessageId(), deliveryReport.getRequestError().getServiceException().getText());
+                }
+            }
+
+            if (deliveryReport.getResults()==null) return;
 
             if (deliveryReport.getResults().size() > 0) {
                 //Уменьшаем сон до минимума (10 сек)
@@ -55,15 +64,21 @@ public class DeliveryReportProcessor extends AbstractProcessor {
                     this.setSleepTime(sleepTime + SLEEP_STEP);
             }
 
+
+
             /* Бежим по сообщениям и сохраняем их статусы в БД,
             *  перепривязываем текущий статус
             */
+            sessionForTransactions = Config.getHibernateSessionFactory().openStatelessSession();
 
-            sessionForTransactions.getTransaction().begin();
+            MessageDAO msgDAO = new MessageDAO(sessionForTransactions);
+            ReportDAO rptDAO = new ReportDAO(sessionForTransactions);
+
 
             for (InfobipObjects.Result message : deliveryReport.getResults()) {
 
                 try {
+
 
 
                     messageId = message.getMessageId();
@@ -76,7 +91,6 @@ public class DeliveryReportProcessor extends AbstractProcessor {
                     }
 
                     if (msg != null) {
-
 
                         Report report = new Report(
                                 msg.getId(),
@@ -92,6 +106,8 @@ public class DeliveryReportProcessor extends AbstractProcessor {
                         report.setMessageCount(message.getMessageCount());
                         report.setMccMnc(message.getMccMnc());
 
+                        sessionForTransactions.getTransaction().begin();
+
                         rptDAO.add(report);
 /* По идее тут надо сделать обработку статуса
    например, получатель не валидный,
@@ -102,27 +118,29 @@ public class DeliveryReportProcessor extends AbstractProcessor {
                 } catch (JDBCException e) {
                     logger.error("Error: " + e.getSQLException().getMessage(), e);
                     sessionForTransactions.getTransaction().rollback();
+                    break;
                 }
             }
 
-        } catch (InfobipMessageGateway.RequestErrorException requestErrorException){
-            logger.error("Get report error: "+ requestErrorException.getMessage());
+        } catch (InfobipMessageGateway.RequestErrorException requestErrorException) {
+            logger.error("Get report infobip error: " + requestErrorException.getMessage());
             // В случае ошибок URL_ERROR, PROXY_ERROR, AUTH_ERROR - неверные настройки сервера. Процесс получения репортов останавливается
             // до исправления
 
-            if (   requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.URL_ERROR)
-                    ||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.PROXY_ERROR)
-                    ||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.AUTH_ERROR)
-                    /*||requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.CONNECTION_ERROR)*/
-               ){
+            if (requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.URL_ERROR)
+                    || requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.PROXY_ERROR)
+                    || requestErrorException.getType().equals(InfobipMessageGateway.ConnectionErrors.AUTH_ERROR)
+                    ) {
 
-                sessionForTransactions.close();
-                ims.stop();
                 throw requestErrorException;
             }
-
+        } finally{
+            if (sessionForTransactions!=null){
+                try{ sessionForTransactions.close();} catch(Exception ignored){}
+            }
+            if (ims!=null){
+                try{ ims.stop();} catch(Exception ignored){}
+            }
         }
-        sessionForTransactions.close();
-        ims.stop();
     }
 }

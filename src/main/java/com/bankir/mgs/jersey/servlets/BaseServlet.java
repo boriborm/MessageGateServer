@@ -2,7 +2,7 @@ package com.bankir.mgs.jersey.servlets;
 
 import com.bankir.mgs.Config;
 import com.bankir.mgs.User;
-import com.bankir.mgs.jersey.model.JsonObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.WebApplicationException;
@@ -33,7 +33,7 @@ abstract class BaseServlet {
              !user.userWithRole(User.ROLE_RESTSERVICE)
            ){
             throw new WebApplicationException(
-                    JsonObject.getErrorResponse(Response.Status.FORBIDDEN, Config.MSG_FORBIDDEN)
+                    MgsJsonObject.getErrorResponse(Response.Status.FORBIDDEN, Config.MSG_FORBIDDEN)
             );
         }
 
@@ -46,7 +46,7 @@ abstract class BaseServlet {
         }
         if (!hasRole){
             throw new WebApplicationException(
-                    JsonObject.getErrorResponse(Response.Status.FORBIDDEN, Config.MSG_FORBIDDEN)
+                    MgsJsonObject.getErrorResponse(Response.Status.FORBIDDEN, Config.MSG_FORBIDDEN)
             );
         }
 
@@ -61,7 +61,7 @@ abstract class BaseServlet {
 */
     static void throwException(String errorMessage) {
         throw new WebApplicationException(
-                JsonObject.getErrorResponse(Response.Status.OK, errorMessage)
+                MgsJsonObject.getErrorResponse(Response.Status.OK, errorMessage)
         );
     }
 

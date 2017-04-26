@@ -1,7 +1,7 @@
 package com.bankir.mgs.jersey.model;
 
 
-public class ProcessorsStatusObject extends JsonObject {
+public class ProcessorsStatusObject extends MgsJsonObject {
     private Status queue;
     private Status delivery;
     private Status file;

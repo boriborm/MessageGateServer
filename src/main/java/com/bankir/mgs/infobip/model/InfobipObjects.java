@@ -224,7 +224,6 @@ public class InfobipObjects {
         private InfobipObjects.Parseco parseco;
         private InfobipObjects.Voice voice;
         private InfobipObjects.Facebook facebook;
-        private String text;
         private Date sendAt;
 
         public OmniAdvancedMessage(String scenarioKey, String bulkId, com.bankir.mgs.hibernate.model.Message msg, MessageType msgType, List<InfobipObjects.Destination> destinations){
@@ -240,7 +239,19 @@ public class InfobipObjects {
             this.facebook = (msg.getViberText()!=null?new InfobipObjects.Facebook(msg.getFacebookText(), msgType.getFacebookValidityPeriod()):null);
 
         }
-        public OmniAdvancedMessage(List<InfobipObjects.Destination> destination, String msg){
+    }
+
+    public static class OmniSimpleMessage {
+
+        private String bulkId;
+        private String scenarioKey;
+
+        private List<InfobipObjects.Destination> destinations ;
+
+        private String text;
+        private Date sendAt;
+
+        public OmniSimpleMessage(List<InfobipObjects.Destination> destination, String msg){
             this.destinations = destination;
             this.text = msg;
         }

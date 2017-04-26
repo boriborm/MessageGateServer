@@ -5,7 +5,10 @@ import com.bankir.mgs.Settings;
 import com.bankir.mgs.infobip.model.*;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.HttpResponseException;
 import org.eclipse.jetty.client.ProxyConfiguration;
 import org.eclipse.jetty.client.api.AuthenticationStore;
 import org.eclipse.jetty.client.api.ContentResponse;
@@ -20,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
+import java.net.ConnectException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.ExecutionException;
@@ -37,18 +41,30 @@ public class InfobipMessageGateway {
     private static Gson gson;
 
 
-    public enum ConnectionErrors  {UNKNOWN_ERROR, URL_ERROR, PROXY_ERROR, AUTH_ERROR, INTERRUPTED, CONNECTION_ERROR, TIMEOUT };
+    public enum ConnectionErrors  {UNKNOWN_ERROR, URL_ERROR, PROXY_ERROR, AUTH_ERROR, INTERRUPTED, CONNECTION_ERROR, TIMEOUT }
 
     public static class RequestErrorException extends Exception {
         private ConnectionErrors type;
-
-        public RequestErrorException(String message, ConnectionErrors type) {
+        private String message;
+        private Exception e;
+        RequestErrorException(String message, ConnectionErrors type, Exception e) {
             super(message);
+            this.e = e;
+            this.message = message;
             this.type = type;
         }
 
         public ConnectionErrors getType() {
             return type;
+        }
+
+        @Override
+        public String getMessage() {
+            return (message==null?e.getMessage():message);
+        }
+
+        public Exception getOriginalException() {
+            return e;
         }
     }
 
@@ -76,7 +92,7 @@ public class InfobipMessageGateway {
                         )
                 );
             } catch (URISyntaxException e) {
-                throw new RequestErrorException(e.getMessage(), ConnectionErrors.URL_ERROR);
+                throw new RequestErrorException(e.getMessage(), ConnectionErrors.URL_ERROR, e);
             }
             ProxyConfiguration proxyConfig = httpClient.getProxyConfiguration();
             proxyConfig.getProxies().add(Config.getProxy());
@@ -85,7 +101,7 @@ public class InfobipMessageGateway {
         try {
             httpClient.start();
         } catch (Exception e) {
-            throw new RequestErrorException(e.getMessage(), ConnectionErrors.CONNECTION_ERROR);
+            throw new RequestErrorException(e.getMessage(), ConnectionErrors.CONNECTION_ERROR, e);
         }
 
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -112,12 +128,27 @@ public class InfobipMessageGateway {
 
         if (url==null) {
             logger.error("send advanced message url not set");
-            throw new RequestErrorException("send advanced message url not set", ConnectionErrors.URL_ERROR);
+            throw new RequestErrorException("Advanced message url not set", ConnectionErrors.URL_ERROR, null);
         }
 
         String jsonStr = gson.toJson(advMsg);
-        ContentResponse response = sendMessage(HttpMethod.POST, url, jsonStr);
-        return gson.fromJson(response.getContentAsString(), MessagesResponse.class);
+        JsonObject response = sendMessage(HttpMethod.POST, url, jsonStr);
+        return gson.fromJson(response, MessagesResponse.class);
+    }
+
+    public MessagesResponse sendSimpleMessage(InfobipObjects.OmniSimpleMessage msg) throws RequestErrorException {
+
+        Settings settings = Config.getSettings();
+        String url = settings.getInfobip().getSendSimpleMessageUrl();
+
+        if (url==null) {
+            logger.error("send simple message url not set");
+            throw new RequestErrorException("Simple message url not set", ConnectionErrors.URL_ERROR, null);
+        }
+
+        String jsonStr = gson.toJson(msg);
+        JsonObject response = sendMessage(HttpMethod.POST, url, jsonStr);
+        return gson.fromJson(response, MessagesResponse.class);
     }
 
     public DeliveryReport getReport() throws RequestErrorException {
@@ -127,11 +158,11 @@ public class InfobipMessageGateway {
 
         if (url==null) {
             logger.error("Delivery report url not set");
-            throw new RequestErrorException("Delivery report url not set", ConnectionErrors.URL_ERROR);
+            throw new RequestErrorException("Delivery report url not set", ConnectionErrors.URL_ERROR, null);
         }
 
-        ContentResponse response = sendMessage(HttpMethod.GET, url, null);
-        return gson.fromJson(response.getContentAsString(), DeliveryReport.class);
+        JsonObject response = sendMessage(HttpMethod.GET, url, null);
+        return gson.fromJson(response, DeliveryReport.class);
 
     }
 
@@ -144,18 +175,19 @@ public class InfobipMessageGateway {
 
         if (url==null) {
             logger.error("getImsi url not set");
-            throw new RequestErrorException("Imsi url not set", ConnectionErrors.URL_ERROR);
+            throw new RequestErrorException("Imsi url not set", ConnectionErrors.URL_ERROR, null);
         }
 
         String jsonStr = gson.toJson(imsiRequest);
-        ContentResponse response = sendMessage(HttpMethod.POST, url, jsonStr);
-        return gson.fromJson(response.getContentAsString(), ImsiResponse.class);
+        JsonObject response = sendMessage(HttpMethod.POST, url, jsonStr);
+        return gson.fromJson(response, ImsiResponse.class);
     }
 
-    public ContentResponse sendMessage(HttpMethod method, String url, String content) throws RequestErrorException {
+    public JsonObject sendMessage(HttpMethod method, String url, String content) throws RequestErrorException {
 
         logger.debug("Send message");
-        ContentResponse response;
+
+        JsonObject result = null;
         try {
 
 
@@ -173,30 +205,81 @@ public class InfobipMessageGateway {
                 request = request.content(new StringContentProvider(content));
             }
 
-            response = request.send();
+            ContentResponse response = request.send();
 
+            logger.debug("Response status: {}, Type: {}", response.getStatus(), response.getMediaType());
+            logger.debug("Response content: {}", new String (response.getContent()));
+
+
+            result = new JsonParser().parse(response.getContentAsString()).getAsJsonObject();
+
+            result.addProperty("httpStatus", response.getStatus());
+
+            if (result.has("requestError")){
+                InfobipObjects.RequestError requestError = gson.fromJson(result.getAsJsonObject("requestError"), InfobipObjects.RequestError.class);
+                String errorId = requestError.getServiceException().getMessageId();
+
+                ConnectionErrors errType = ConnectionErrors.UNKNOWN_ERROR;
+
+                if ("GENERAL_ERROR".equalsIgnoreCase(errorId)) errType = ConnectionErrors.CONNECTION_ERROR;
+                if ("COMMUNICATION_ERROR".equalsIgnoreCase(errorId)) errType = ConnectionErrors.CONNECTION_ERROR;
+                if ("ERROR_PROCESSING".equalsIgnoreCase(errorId)) errType = ConnectionErrors.CONNECTION_ERROR;
+                if ("SEND_ERROR".equalsIgnoreCase(errorId)) errType = ConnectionErrors.CONNECTION_ERROR;
+
+                if ("INVALID_USER_OR_PASS".equalsIgnoreCase(errorId)) errType = ConnectionErrors.AUTH_ERROR;
+                if ("MISSING_USERNAME".equalsIgnoreCase(errorId)) errType = ConnectionErrors.AUTH_ERROR;
+                if ("MISSING_PASSWORD".equalsIgnoreCase(errorId)) errType = ConnectionErrors.AUTH_ERROR;
+                if ("NOT_ENOUGH_CREDITS".equalsIgnoreCase(errorId)) errType = ConnectionErrors.AUTH_ERROR;
+
+
+
+                throw new RequestErrorException(requestError.getServiceException().getText(), errType, null);
+            }
 
 
         } catch (InterruptedException e) {
-            throw new RequestErrorException(e.getMessage(), ConnectionErrors.INTERRUPTED);
+            throw new RequestErrorException(e.getMessage(), ConnectionErrors.INTERRUPTED, e);
         } catch (ExecutionException e) {
-            throw new RequestErrorException(e.getMessage(),getErrorType(e.getMessage()));
+            throw new RequestErrorException(e.getMessage(),getErrorType(e, e.getMessage()), e);
         } catch (TimeoutException e) {
-            throw new RequestErrorException(e.getMessage(), ConnectionErrors.TIMEOUT);
+            throw new RequestErrorException(e.getMessage(), ConnectionErrors.TIMEOUT, e);
         }
 
-        logger.debug("Response status: {}, Type: {}", response.getStatus(), response.getMediaType());
-        logger.debug("Response content: {}", new String (response.getContent()));
 
-        return response;
+        return result;
     }
 
-    private static ConnectionErrors getErrorType(String error){
+    private static ConnectionErrors getErrorType(Throwable t, String error){
         ConnectionErrors result = ConnectionErrors.UNKNOWN_ERROR;
+
+        Throwable cause = getThrowableCaused(t, HttpResponseException.class);
+        if (cause!=null){
+            result = ConnectionErrors.CONNECTION_ERROR;
+        }
+
+        cause = getThrowableCaused(t, ConnectException.class);
+        if (cause!=null){
+            result = ConnectionErrors.CONNECTION_ERROR;
+        }
+
         if (error.contains("HTTP protocol violation: Authentication challenge without")) result = ConnectionErrors.AUTH_ERROR;
         if (error.contains("HTTP/1.1 407 Proxy Authentication Required")) result = ConnectionErrors.PROXY_ERROR;
-        if (error.contains("java.net.ConnectException")) result = ConnectionErrors.CONNECTION_ERROR;
+        //if (error.contains("java.net.ConnectException")) result = ConnectionErrors.CONNECTION_ERROR;
 
+
+        return result;
+    }
+
+    private static Throwable getThrowableCaused(Throwable e, Class clazz) {
+        Throwable cause = null;
+        Throwable result = e;
+
+        while(null != (cause = result.getCause()) && (result != cause))  {
+            result = cause;
+            if (result.getClass().isAssignableFrom(clazz)){
+                break;
+            }
+        }
         return result;
     }
 }

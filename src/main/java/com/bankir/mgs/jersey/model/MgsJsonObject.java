@@ -6,20 +6,20 @@ import com.google.gson.GsonBuilder;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-public class JsonObject {
+public class MgsJsonObject {
     private boolean success;
     private String message;
     private Object data;
     private Long total;
-    public JsonObject(boolean success){
+    public MgsJsonObject(boolean success){
         this.success = success;
     }
 
-    public JsonObject(String errorMessage){
+    public MgsJsonObject(String errorMessage){
         this.success=false;
         this.message=errorMessage;
     }
-    public JsonObject(Object data){
+    public MgsJsonObject(Object data){
         this.success=true;
         this.data=data;
     }
@@ -28,12 +28,12 @@ public class JsonObject {
         return message;
     }
 
-    public JsonObject() {
+    public MgsJsonObject() {
         this.success=true;
     }
 
     public static Response getErrorResponse(Response.Status status, String errorMessage){
-        JsonObject jObj = new JsonObject(errorMessage);
+        MgsJsonObject jObj = new MgsJsonObject(errorMessage);
         GsonBuilder gsonBuilder = new GsonBuilder();
         Gson gson = gsonBuilder.create();
         return Response.status(status)
@@ -71,7 +71,7 @@ public class JsonObject {
         return success;
     }
 
-    public static JsonObject Success(){
-        return new JsonObject();
+    public static MgsJsonObject Success(){
+        return new MgsJsonObject();
     }
 }

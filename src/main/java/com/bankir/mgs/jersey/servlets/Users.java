@@ -11,7 +11,7 @@ import com.bankir.mgs.hibernate.model.MessageType;
 import com.bankir.mgs.hibernate.model.User;
 import com.bankir.mgs.hibernate.model.UserMessageType;
 import com.bankir.mgs.jersey.PasswordStorage;
-import com.bankir.mgs.jersey.model.JsonObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 import com.bankir.mgs.jersey.model.UserObject;
 import org.hibernate.JDBCException;
 import org.hibernate.StatelessSession;
@@ -30,121 +30,118 @@ public class Users extends BaseServlet{
     @POST
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
-    public JsonObject create(UserObject user) {
+    public MgsJsonObject create(UserObject user) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
+        MgsJsonObject result;
 
         // Открываем сессию с транзакцией
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        session.getTransaction().begin();
-
-        //Сохраняем данные сценария в БД
-        UserDAO dao = new UserDAO(session);
+        StatelessSession session = null;
         try {
+            session = Config.getHibernateSessionFactory().openStatelessSession();
 
+
+            //Сохраняем данные сценария в БД
+            UserDAO dao = new UserDAO(session);
             //Проверяем наличие пользователей с таким логином
             User usr = dao.getByLogin(user.getLogin());
-            if (usr!=null){
-                session.close();
-                throwException("Пользователь с логином \""+user.getLogin()+"\" уже существует.");
-            }
+            if (usr==null) {
+                //рассчитываем хэш информацию по паролю
+                String hashInfo = null;
 
-            //рассчитываем хэш информацию по паролю
-            String hashInfo = null;
-            try {
                 hashInfo = PasswordStorage.createHash(user.getPassword().toCharArray());
-            } catch (PasswordStorage.CannotPerformOperationException e) {
-                session.close();
-                throwException(e.getMessage());
-            }
 
-            usr = new User(
-                    user.getLogin(),
-                    hashInfo,
-                    false,
-                    user.getUserName()
-            );
-            //переносим роли
-            usr.setRoles(user.getRoles());
-            dao.add(usr);
+                usr = new User(
+                        user.getLogin(),
+                        hashInfo,
+                        false,
+                        user.getUserName()
+                );
+                //переносим роли
+                usr.setRoles(user.getRoles());
 
-            //заполняем для возврата полученный идентификатор и обнуляем пароль, чтобы не светился лишний раз
-            user.setId(usr.getId());
-            user.setPassword(null);
+                session.getTransaction().begin();
 
-            //Добавляме доступ к типу сообщения по умолчанию
+                dao.add(usr);
 
-            MessageTypeDAO mtdao = new MessageTypeDAO(session);
-            MessageType defaultMt = mtdao.getById(Config.getSettings().getDefaultMessageType());
-            if (defaultMt != null){
-                UserMessageTypeDAO umtdao = new UserMessageTypeDAO(session);
-                UserMessageType umt = new UserMessageType(defaultMt.getTypeId(), usr.getId());
-                umtdao.add(umt);
-            }
+                //заполняем для возврата полученный идентификатор и обнуляем пароль, чтобы не светился лишний раз
+                user.setId(usr.getId());
+                user.setPassword(null);
+
+                //Добавляме доступ к типу сообщения по умолчанию
+
+                MessageTypeDAO mtdao = new MessageTypeDAO(session);
+                MessageType defaultMt = mtdao.getById(Config.getSettings().getDefaultMessageType());
+                if (defaultMt != null){
+                    UserMessageTypeDAO umtdao = new UserMessageTypeDAO(session);
+                    UserMessageType umt = new UserMessageType(defaultMt.getTypeId(), usr.getId());
+                    umtdao.add(umt);
+                }
 
 
-            session.getTransaction().commit();
-            json = new JsonObject(user);
+                session.getTransaction().commit();
+                result = new MgsJsonObject(user);
+            } else
+                result = new MgsJsonObject("Пользователь с логином \""+user.getLogin()+"\" уже существует.");
 
         }catch (JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            json = new JsonObject("Ошибка создания типа сообщения в БД: " + e.getSQLException().getMessage());
-
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){};
+            result = new MgsJsonObject("Ошибка создания типа сообщения в БД: " + e.getSQLException().getMessage());
+        } catch (PasswordStorage.CannotPerformOperationException e) {
+            result = new MgsJsonObject(e.getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
 
-        // Закрываем сессию
-        session.close();
-
-        return json;
+        return result;
     }
 
     @PUT
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public JsonObject update(UserObject user, @PathParam("id") Long id) {
+    public MgsJsonObject update(UserObject user, @PathParam("id") Long id) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
+        MgsJsonObject json;
 
         // Открываем сессию с транзакцией
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        session.getTransaction().begin();
-
-        //Сохраняем данные сценария в БД
-        UserDAO dao = new UserDAO(session);
+        StatelessSession session = null;
         try {
+
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            //Сохраняем данные сценария в БД
+            UserDAO dao = new UserDAO(session);
 
             //Проверяем наличие пользователей с таким логином
             User usr = dao.getById(id);
-            if (usr==null){
-                session.close();
-                throwException("Пользователь с идентификатором "+id+" не найден.");
-            }
+            if (usr!=null) {
+                usr.setLocked(user.isLocked());
+                usr.setUserName(user.getUserName());
+                usr.setRoles(user.getRoles());
 
-            usr.setLocked(user.isLocked());
-            usr.setUserName(user.getUserName());
-            usr.setRoles(user.getRoles());
+                session.getTransaction().begin();
 
-            dao.save(usr);
+                dao.save(usr);
 
-            session.getTransaction().commit();
-            json = JsonObject.Success();
+                session.getTransaction().commit();
+                json = MgsJsonObject.Success();
+
+            } else
+                json = new MgsJsonObject("Пользователь с идентификатором "+id+" не найден.");
 
         }catch (JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            json = new JsonObject("Ошибка обновления данных пользователя в БД: " + e.getSQLException().getMessage());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            json = new MgsJsonObject("Ошибка обновления данных пользователя в БД: " + e.getSQLException().getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-
-        // Закрываем сессию
-        session.close();
 
         return json;
 
@@ -154,16 +151,16 @@ public class Users extends BaseServlet{
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/passwupd")
-    public JsonObject updatePassword(UserObject user) {
+    public MgsJsonObject updatePassword(UserObject user) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
+        MgsJsonObject json;
 
         // Открываем сессию с транзакцией
         StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        session.getTransaction().begin();
+
 
         //Сохраняем данные сценария в БД
         UserDAO dao = new UserDAO(session);
@@ -171,35 +168,30 @@ public class Users extends BaseServlet{
 
             //Проверяем наличие пользователей с таким логином
             User usr = dao.getByLogin(user.getLogin());
-            if (usr==null){
-                session.close();
-                throwException("Пользователь с логином \""+user.getLogin()+"\" не найден.");
-            }
+            if (usr!=null){
+                //рассчитываем хэш информацию по паролю
+                String hashInfo = PasswordStorage.createHash(user.getPassword().toCharArray());
 
-            //рассчитываем хэш информацию по паролю
-            String hashInfo = null;
-            try {
-                hashInfo = PasswordStorage.createHash(user.getPassword().toCharArray());
-            } catch (PasswordStorage.CannotPerformOperationException e) {
-                session.close();
-                throwException(e.getMessage());
-            }
+                usr.setHashInfo(hashInfo);
 
-            usr.setHashInfo(hashInfo);
+                session.getTransaction().begin();
 
-            dao.save(usr);
+                dao.save(usr);
 
-            session.getTransaction().commit();
-            json = JsonObject.Success();
+                session.getTransaction().commit();
+                json = MgsJsonObject.Success();
+            } else
+                json = new MgsJsonObject("Пользователь с логином \""+user.getLogin()+"\" не найден.");
 
         }catch (JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            json = new JsonObject("Ошибка обновления пароля пользователя в БД: " + e.getSQLException().getMessage());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            json = new MgsJsonObject("Ошибка обновления пароля пользователя в БД: " + e.getSQLException().getMessage());
+        } catch (PasswordStorage.CannotPerformOperationException e) {
+            json = new MgsJsonObject(e.getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-
-        // Закрываем сессию
-        session.close();
 
         return json;
 
@@ -209,48 +201,48 @@ public class Users extends BaseServlet{
     @Produces(MediaType.APPLICATION_JSON+ ";charset=utf-8")
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}")
-    public JsonObject delete(UserObject user, @PathParam("id") Long id) {
+    public MgsJsonObject delete(UserObject user, @PathParam("id") Long id) {
 
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
+        MgsJsonObject json;
 
         // Открываем сессию с транзакцией
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
 
+        StatelessSession session = null;
         //Проверяем наличие сообщений с таким типом
 
         List<FilterProperty> filterProperties = new ArrayList<>();
         filterProperties.add(new FilterProperty("userId", id));
-        Query query = Utils.createQuery(session,  "From Message where userId=:userId", 0, 1, filterProperties, null)
-                .setReadOnly(true);
-        List result = query.list();
-
-        if (result.size()>0){
-
-            session.close();
-            throwException("Удаление невозможно. Идентификатор пользователя использован в сообщениях!");
-        }
-
-        session.getTransaction().begin();
-        //Сохраняем данные сценария в БД
-        UserDAO dao = new UserDAO(session);
         try {
-            User usr = new User(id);
-            dao.delete(usr);
+            session = Config.getHibernateSessionFactory().openStatelessSession();
+            Query query = Utils.createQuery(session,  "From Message where userId=:userId", 0, 1, filterProperties, null)
+                    .setReadOnly(true);
+            List result = query.list();
 
-            session.getTransaction().commit();
-            json = JsonObject.Success();
+            if (result.size()==0) {
+                User usr = new User(id);
+
+                session.getTransaction().begin();
+                //Сохраняем данные сценария в БД
+                UserDAO dao = new UserDAO(session);
+
+                dao.delete(usr);
+
+                session.getTransaction().commit();
+                json = MgsJsonObject.Success();
+
+            } else
+                json = new MgsJsonObject("Удаление невозможно. Идентификатор пользователя использован в сообщениях!");
 
         }catch (JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            session.getTransaction().rollback();
-            json = new JsonObject("Ошибка удаления типа сообщения в БД: " + e.getSQLException().getMessage());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            json = new MgsJsonObject("Ошибка удаления типа сообщения в БД: " + e.getSQLException().getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-
-        // Закрываем сессию
-        session.close();
 
         return json;
 
@@ -258,7 +250,7 @@ public class Users extends BaseServlet{
 
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
-    public JsonObject list(
+    public MgsJsonObject list(
             @QueryParam("start") int start,
             @QueryParam("limit") int limit,
             @QueryParam("page") int page,
@@ -270,12 +262,13 @@ public class Users extends BaseServlet{
         /* Авторизация пользователя по роли */
         authorizeOrThrow(adminRoles);
 
-        JsonObject json;
+        MgsJsonObject json;
 
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
+        StatelessSession session = null;
 
         try {
 
+            session = Config.getHibernateSessionFactory().openStatelessSession();
 
             List<FilterProperty> filterProperties = Utils.parseFilterProperties(filter);
             List<SorterProperty> sorterProperties = Utils.parseSortProperties(sort);
@@ -310,15 +303,17 @@ public class Users extends BaseServlet{
                         )
                 );
             }
-            json = new JsonObject(users);
+            json = new MgsJsonObject(users);
             json.setTotal(countResults);
 
         }catch(JDBCException e){
             logger.error("Error: "+e.getSQLException().getMessage(), e);
-            json = new JsonObject(e.getSQLException().getMessage());
+            if (session!=null) try {session.getTransaction().rollback();} catch (Exception ignored){}
+            json = new MgsJsonObject(e.getSQLException().getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
 
-        session.close();
         return json;
 
     }

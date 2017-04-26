@@ -4,7 +4,7 @@ import com.bankir.mgs.Config;
 import com.bankir.mgs.FilterProperty;
 import com.bankir.mgs.User;
 import com.bankir.mgs.hibernate.Utils;
-import com.bankir.mgs.jersey.model.JsonObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 import org.hibernate.StatelessSession;
 import org.hibernate.query.Query;
 import org.slf4j.Logger;
@@ -25,17 +25,17 @@ public class Bulks extends BaseServlet{
 
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=utf-8")
-    public JsonObject list(
+    public MgsJsonObject list(
             @QueryParam("query") String q
     ){
         /* Авторизация пользователя по роли */
         authorizeOrThrow(viewBulksRoles);
 
         //Если фильтр не задан, возвращаем пустой список
-        if (q==null||q.length()==0) return new JsonObject(true);
+        if (q==null||q.length()==0) return new MgsJsonObject(true);
 
-        StatelessSession session = Config.getHibernateSessionFactory().openStatelessSession();
-        JsonObject json;
+        StatelessSession session = null;
+        MgsJsonObject json;
         try {
 
 
@@ -45,21 +45,19 @@ public class Bulks extends BaseServlet{
             List<FilterProperty> filterProperties = new ArrayList<>();
             filterProperties.add(new FilterProperty("query", "%"+q+"%"));
 
+            session = Config.getHibernateSessionFactory().openStatelessSession();
             //Ограничние на возврат первых 30 записей, подходящих по маске.
             Query query = Utils.createQuery(session,  hqlFrom + hqlWhere, 0, 30, filterProperties, null)
                     .setReadOnly(true);
 
-            json = new JsonObject(query.list());
+            json = new MgsJsonObject(query.list());
 
-
-
-
-            return json;
         }catch(Exception e){
             logger.error("Error: "+e.getMessage());
-            json = new JsonObject(e.getMessage());
+            json = new MgsJsonObject(e.getMessage());
+        } finally {
+            if (session!=null) try {session.close();} catch (Exception ignored){}
         }
-        session.close();
         return json;
     }
 

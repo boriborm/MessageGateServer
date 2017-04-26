@@ -2,7 +2,7 @@ package com.bankir.mgs.jersey.servlets;
 
 
 import com.bankir.mgs.FileProcessor;
-import com.bankir.mgs.jersey.model.JsonObject;
+import com.bankir.mgs.jersey.model.MgsJsonObject;
 import com.bankir.mgs.jersey.model.ProcessorsStatusObject;
 
 import javax.ws.rs.GET;
@@ -41,6 +41,6 @@ public class Processors extends BaseServlet{
             resp.setFile(new ProcessorsStatusObject.Status(fp.isActive(), fp.getSleepTime(), fp.getStatus()));
             return resp;
         }
-        return JsonObject.Success();
+        return MgsJsonObject.Success();
     }
 }

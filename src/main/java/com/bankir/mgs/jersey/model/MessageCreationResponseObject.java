@@ -3,7 +3,7 @@ package com.bankir.mgs.jersey.model;
 
 import java.util.List;
 
-public class MessageCreationResponseObject extends JsonObject{
+public class MessageCreationResponseObject extends MgsJsonObject {
 
     private String bulkDescription;
     private Long bulkId;
