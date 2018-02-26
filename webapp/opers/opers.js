@@ -4,10 +4,7 @@ Ext.define('opers.Application', {
   requires:[
 	'global.classes.AppStarter',
 	'global.classes.APReport',
-	'DMDS.proxy.DmdsProxy',
-	'DMDS.proxy.DmdsWriter',
-	'Ext.ux.form.ItemSelector',
-	'DMDS.view.DemandPrinter'
+	'Ext.ux.form.ItemSelector'
   ],
   controllers: ['Controller'],
   name: 'opers',
